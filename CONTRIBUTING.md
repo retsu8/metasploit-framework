@@ -1,122 +1,184 @@
-# Hello, World!
-
-Thanks for your interest in making Metasploit -- and therefore, the
-world -- a better place!
-
-Are you about to report a bug? Sorry to hear it. Here's our [Issue tracker].
-Please try to be as specific as you can about your problem; include steps
-to reproduce (cut and paste from your console output if it's helpful) and
-what you were expecting to happen.
-
-Are you about to report a security vulnerability in Metasploit itself?
-How ironic! Please take a look at Rapid7's [Vulnerability
-Disclosure Policy](https://www.rapid7.com/disclosure.jsp), and send
-your report to security@rapid7.com using our [PGP key].
-
-Are you about to contribute some new functionality, a bug fix, or a new
-Metasploit module? If so, read on...
-
 # Contributing to Metasploit
+Thank you for your interest in making Metasploit -- and therefore, the
+world -- a better place!  Before you get started, please review our [Code of Conduct](./CODE_OF_CONDUCT.md). This helps us ensure our community is positive and supportive for everyone involved.
 
-What you see here in CONTRIBUTING.md is a bullet point list of the do's
-and don'ts of how to make sure *your* valuable contributions actually
-make it into Metasploit's master branch.
+## Code Free Contributions
+Before we get into the details of contributing code, you should know there are multiple ways you can add to Metasploit without any coding experience:
 
-If you care not to follow these rules, your contribution **will** be
-closed. Sorry!
+ - You can [submit bugs and feature requests](https://github.com/rapid7/metasploit-framework/issues/new/choose) with detailed information about your issue or idea:
+ 	- If you'd like to propose a feature, describe what you'd like to see. Mock ups of console views would be great.
+ 	- If you're reporting a bug, please be sure to include the expected behaviour, the observed behaviour, and steps to reproduce the problem. Resource scripts, console copy-pastes, and any background on the environment you encountered the bug in would be appreciated. More information can be found [below](#bug-reports).
+ - [Help fellow users with open issues](https://github.com/rapid7/metasploit-framework/issues). This can require technical knowledge, but you can also get involved in conversations about bug reports and feature requests. This is a great way to get involved without getting too overwhelmed!
+ - [Help fellow committers test recently submitted pull requests](https://github.com/rapid7/metasploit-framework/pulls). Again this can require some technical skill, but by pulling down a pull request and testing it, you can help ensure our new code contributions for stability and quality.
+ - [Report a security vulnerability in Metasploit itself] to Rapid7. If you see something you think makes Metasploit vulnerable to an attack, let us know!
+ - Add [module documentation]. New documentation is always needed and cleaning up existing documents is just as important! If you're a non-native English speaker, you can help by replacing any ambiguous idioms, metaphors, or unclear language that might make our documentation hard to understand.
 
-This is intended to be a **short** list. The [wiki] is much more
-exhaustive and reveals many mysteries. If you read nothing else, take a
-look at the standard [development environment setup] guide
-and Metasploit's [Common Coding Mistakes].
 
 ## Code Contributions
+For those of you who are looking to add code to Metasploit, your first step is to set up a [development environment]. Once that's done, we recommend beginners start by adding a [proof-of-concept exploit from ExploitDB,](https://www.exploit-db.com/search?verified=true&hasapp=true&nomsf=true) as a new module to the Metasploit framework. These exploits have been verified as recreatable and their ExploitDB page includes a copy of the exploitable software. This makes testing your module locally much simpler, and most importantly the exploits don't have an existing Metasploit implementation. ExploitDB can be slow to update however, so please double check that there isn't an existing module before beginning development! If you're certain the exploit you've chosen isn't already in Metasploit, read our [writing an exploit guide](https://docs.metasploit.com/docs/development/developing-modules/guides/get-started-writing-an-exploit.html). It will help you to get started and avoid some common mistakes.
 
-* **Do** stick to the [Ruby style guide].
-* **Do** get [Rubocop] relatively quiet against the code you are adding or modifying.
+Once you have finished your new module and tested it locally to ensure it's working as expected, check out our [guide for accepting modules](https://docs.metasploit.com/docs/development/maintainers/process/guidelines-for-accepting-modules-and-enhancements.html#module-additions). This will give you a good idea of how to clean up your code so that it's likely to get accepted.
+
+Finally, follow our short list of do's and don'ts below to make sure your valuable contributions actually make it into Metasploit's master branch! We try to consider all our pull requests fairly and in detail, but if you do not follow these rules, your contribution
+will be closed. We need to ensure the code we're adding to master is written to a high standard.
+
+## Expedited Module Creation Process
+We strive to respect the community that has given us so much, so in the odd situation where we get multiple submissions for the same vulnerability, generally we will work with the first person who assigns themselves to the issue or the first person that submits a good-faith PR.  A good-faith PR might not even work, but it will show that the author is working their way toward a solution.  Despite this general rule, there are rare circumstances where we may ask a contributor to step aside or allow a committer to take the lead on the creation of a new module if a complete and working module with documents has not already been submitted.  This kind of expedited module creation process comes up infrequently, and usually it involves high-profile or high priority modules that we have marked internally as time-critical: think KEV list, active exploitation campaigns, CISA announcements, etc.  In those cases, we may ask a contributor that is assigned to the issue or who has submitted an incomplete module to allow a committer to take over an issue or a module PR in the interest of getting a module out quickly.  If a contributor has submitted an incomplete module, they will remain as a co-author of the module and we may build directly onto the PR they submitted, leaving the original commits in the tree.  We sincerely hope that the original author will remain involved in this expedited module creation process.  We would appreciate testing, critiquing, and any assistance that can be offered.  If the module is complete but requires minor changes, we may ask the contributor to allow us to take over testing/verification and make these minor changes without asking so we can land the module as quickly as possible.  In these cases of minor code changes, the authorship of the module will remain unchanged.  We hope everyone involved in this expedited module creation process continues to feel valued and appreciated.
+
+## Vibecoding, AI, and LLM
+My first job had a token ring LAN and I still own a Win98SE CD, so I'm not entirely sure what _vibecoding_ is, but we're cool with any coding technique you use to create a PR as long as it is tested, documented, and does what it says it does.  Untested code is incomplete code, and incomplete code should be marked as a draft PR or WIP (Work in Progress) until it is complete, tested, and ready for a committer to review.  We have had several submissions clearly from AI that were well-formatted, looked really neat, and did nothing it said it did.  While we have no problem with AI-assisted coding, please do not assume that the code generated by an AI or LLM is logically or even syntactically correct.
+
+State in your PR description whether AI tools were used. If so, name the tools and explain how they helped, such as code generation, documentation drafting, or test writing. If no AI tools were used, write "None".
+
+### Code Contribution Do's & Don'ts:
+Keeping the following in mind gives your contribution the best chance of landing!
+
+#### <u>Pull Requests</u>
+**Pull request [PR#9966] is a good example to follow.**
+
+* **Do** create a [topic branch] to work on instead of working directly on `master`. This helps to:
+	*  Protect the process.
+	* Ensures users are aware of commits on the branch being considered for merge.
+	* Allows for a location for more commits to be offered without mingling with other contributor changes.
+	* Allows contributors to make progress while a PR is still being reviewed.
 * **Do** follow the [50/72 rule] for Git commit messages.
-* **Don't** use the default merge messages when merging from other branches.
-* **Do** create a [topic branch] to work on instead of working directly on `master`.
-* **Do** license your code as BSD 3-clause, BSD 2-clause, or MIT.
-
-### Pull Requests
-
-* **Do** target your pull request to the **master branch**. Not staging, not develop, not release.
+* **Do** write "WIP" on your PR and/or open a [draft PR] if submitting **working** yet unfinished code.
+* **Do** target your pull request to the **master branch**.
 * **Do** specify a descriptive title to make searching for your pull request easier.
-* **Do** include [console output], especially for witnessable effects in `msfconsole`.
-* **Do** list [verification steps] so your code is testable.
-* **Do** [reference associated issues] in your pull request description
-* **Do** write [release notes] once a pull request is landed
+* **Do** keep each PR focused on a single module, bug fix, or cohesive logical change.
+* **Do** add reviewer notes when useful: where to start, key changes, and work intentionally deferred or out of scope.
+* **Do** include [console output], especially for effects that can be witnessed in the  `msfconsole`.
+* **Do** test your code and submit the test output in your PR with any sensitive information removed. Console output, screenshots, and links to screen recordings are all useful evidence. Record your results separately from the reviewer verification checklist.
+* **Do** state the operating system and relevant target software or hardware versions used for testing. Include Docker/Vagrant image names or setup instructions when applicable.
+* **Do** list [verification steps] as unchecked Markdown checkboxes (`- [ ]`) in your PR description. Leave them unchecked even if you have already performed the steps; reviewers perform and check off each step during review.
+* **Do** [reference associated issues] in your pull request description.
+* **Do** check the GitHub Actions results after submitting your PR, inspect failed jobs, and resolve failures relevant to your change.
 * **Don't** leave your pull request description blank.
+* **Don't** include sensitive information in your PR (including externally-routable IP addresses in documentation).
+* **Don't** PR untested/unvalidated code you copy/pasted from the internet.
+* **Don't** PR untested/unvalidated code you copy/pasted from AI or LLM.
 * **Don't** abandon your pull request. Being responsive helps us land your code faster.
+* **Don't** post questions in older closed PRs.
 
-Pull requests [PR#2940] and [PR#3043] are a couple good examples to follow.
+PRs missing a description, actionable verification steps, or test evidence will be closed. Give concrete commands or actions, expected observable results, the checks actually performed and their results, and relevant untested limits. Generic claims such as "tested" or "verify it works" are insufficient. Links to existing issue or module documentation and evidence in review discussion count; repeating that information is unnecessary. For trivial typo, comment, or documentation fixes, a brief account of inspection or preview and its result is enough. Remove sections that do not apply.
 
-#### New Modules
+If CodeRabbit requests missing information, update your description or linked instructions. Comment `@coderabbitai run pre-merge checks` to re-evaluate the updated information in its walkthrough comment.
 
-* **Do** run `tools/dev/msftidy.rb` against your module and fix any errors or warnings that come up.
-  - It would be even better to set up `msftidy.rb` as a [pre-commit hook].
-* **Do** use the many module mixin [API]s. Wheel improvements are welcome; wheel reinventions, not so much.
+If approximately two weeks pass after a review request without a comment or code update from you, the team may take over the PR and complete it on your behalf. You will remain credited as a co-author on the final commit. This helps keep contributions moving when contributors are unavailable.
+
+#### <u>New Modules</u>
+* **Do** check the issue tracker to see if there is a `suggestion-module` issue for the module you want to write, and assign yourself to it if there is.
+* **Do** license your code as BSD 3-clause, BSD 2-clause, or MIT.
+* **Do** stick to the [Ruby style guide] and use [Rubocop] to find common style issues.
+* **Do** prefer `# frozen_string_literal: true` as the first line of new module files (the generator includes it automatically). Use `String.new` or `.dup` for strings that need to change. If freezing causes compatibility problems, omit the comment and briefly explain why in the PR. Broad refactoring is not required.
+* **Do** set up `msftidy` as a [pre-commit hook] and ensure it passes with no errors or warnings before submitting — PRs that fail msftidy will not be accepted.
+* **Do** use the many module mixin [API]s.
+* **Do** include instructions on how to setup the vulnerable environment or software.
+* **Do** include [Module Documentation] showing sample run-throughs.
+* **Do** include output from the module's `check` method, when supported, and successful exploitation or execution against a controlled lab/test environment target.
+* **Do** run `ruby tools/dev/msftidy_docs.rb <documentation_file>` on any module documentation markdown files and ensure it passes with no errors.
+* **Do** ask cve@rapid7.com for a CVE ID if this describes a new vulnerability (remember to mention your PR number!)
+* **Do** use `prepend Msf::Exploit::Remote::AutoCheck` to let the framework handle vulnerability checking before exploitation — this is preferred over manually calling `check` in your exploit method.
+* **Do** include a descriptive reason string when returning CheckCode values (e.g., `CheckCode::Safe("Patched version #{v}")`) — bare constants without reasons are not accepted.
+* **Do** explain the specific risk prevented by `DefangedMode` or `DEFANGED_MODE` in its datastore option description and in a matching `###` subsection under `## Options` in the module documentation. Document the default, what execution it blocks, and the consequences of setting it to `false`. `Run in defanged mode` alone does not explain the risk; for example, state that exploitation permanently changes the root password. RuboCop checks the option description; the documentation and accuracy of the reason also need review.
 * **Don't** include more than one module per pull request.
-* **Do** include instructions on how to setup the vulnerable environment or software
-* **Do** include [Module Documentation](https://github.com/rapid7/metasploit-framework/wiki/Generating-Module-Documentation) showing sample run-throughs
+* **Don't** submit new [scripts].  Scripts are shipped as examples for automating local tasks, and anything "serious" can be done with post modules and local exploits.
 
+For modules targeting specialized hardware or complex software (such as licensed, multi-service, or multi-version environments), provide a pcap, screen recording, or video showing successful execution. Email sanitized demonstrations to [msfdev@metasploit.com](mailto:msfdev@metasploit.com), removing real IP addresses, credentials, and hostnames first. See the [pcap sanitization guide](https://docs.metasploit.com/docs/development/get-started/sanitizing-pcaps.html). If the hardware or software is unavailable, explain this in the PR description.
 
+**Scaffolding a new module:** The best way to start a new module is to scaffold it first -- the built-in generator creates a module with correct structure, required metadata, and matching documentation:
 
-#### Scripts
+```
+bundle exec rake 'msf:generate[exploit,linux/http/my_vuln]'
+bundle exec rake 'msf:generate[auxiliary,scanner/http/my_scanner]'
+bundle exec rake 'msf:generate[post,linux/gather/my_gatherer]'
+```
 
-* **Don't** submit new [scripts].  Scripts are shipped as examples for
-  automating local tasks, and anything "serious" can be done with post
-  modules and local exploits.
+New to the generator? Preview the output first without writing any files by setting `MSF_DRY_RUN=1`:
 
-#### Library Code
+```
+MSF_DRY_RUN=1 bundle exec rake 'msf:generate[exploit,linux/http/my_vuln]'
+```
 
-* **Do** write [RSpec] tests - even the smallest change in library land can thoroughly screw things up.
+Pass additional parameters for platform and architecture:
+
+```
+bundle exec rake 'msf:generate[exploit,windows/http/my_vuln,win,x64]'
+```
+
+Set author and CVE via environment variables:
+
+```
+MSF_MOD_AUTHOR="Your Name" MSF_MOD_CVE="2024-12345" bundle exec rake 'msf:generate[exploit,linux/http/my_vuln]'
+```
+
+The generator creates both the module file and a documentation skeleton under `documentation/modules/`. Run `bundle exec rake -T msf` to see all available tasks.
+
+**Before submitting:** Resolve all `TODO:` and `PLACEHOLDER:` comments and placeholder values in the generated files. No stub descriptions, empty `Notes` arrays, or template text should remain in the final module. Run `ruby tools/dev/msftidy.rb` and `bundle exec rubocop` against your module to catch issues early.
+
+#### <u>Modernizing Existing Modules</u>
+We welcome PRs that bring older modules up to current conventions. High-value improvements include:
+
+* **Adding AutoCheck** — if a module has a `check` method but no `prepend Msf::Exploit::Remote::AutoCheck`, adding that single line is a welcome contribution.
+* **Migrating cmd_exec to create_process** — replacing `cmd_exec("cmd #{input}")` with `create_process("cmd", args: [input])` eliminates command injection risks.
+* **Removing HttpFingerprint** — replacing the deprecated `HttpFingerprint` constant with a proper `check` method gives users version-aware vulnerability verification.
+* **Removing unnecessary DefaultOptions PAYLOAD** — letting the framework choose the best payload improves user experience.
+* **Removing redundant peer prefixes** — strip manual host:port prefixes from `print_*`/`vprint_*` messages when a Tcp or scanner mixin already supplies them through `print_prefix`. HttpClient alone does not supply a target prefix, so check the module's mixins first.
+
+Keep modernization PRs focused: one pattern fix per PR, or one subsystem at a time. Include verification steps showing the module still works after the change. The module generator described above supplies source and documentation skeletons when you need to create a new module.
+
+#### <u>Library Code</u>
+* **Do** add or update focused [RSpec] coverage for library behavior changes. For comments, documentation, CI/build configuration, and other changes, use proportionate syntax, lint, configuration, output, or behavior checks; automated tests are not mandatory unless requested.
 * **Do** follow [Better Specs] - it's like the style guide for specs.
 * **Do** write [YARD] documentation - this makes it easier for people to use your code.
+* **Do** use specific error classes (`Rex::RuntimeError`, `ArgumentError`, etc.) — never `raise "bare string"`.
+* **Do** use `rescue StandardError => e` or a narrower expected exception class so the handled error and its context are explicit. Avoid bare `rescue` for clarity and never `rescue Exception`, which also catches signals and exits.
+* **Do** add `# frozen_string_literal: true` as the first line of new library files.
+* **Don't** use `get_`/`set_` prefixes for accessor-style methods in new code.
 * **Don't** fix a lot of things in one pull request. Small fixes are easier to validate.
 
-#### Bug Fixes
-
+#### <u>Bug Fixes</u>
 * **Do** include reproduction steps in the form of verification steps.
-* **Do** include a link to any corresponding [Issues] in the format of
-  `See #1234` in your commit description.
+* **Do** link to any corresponding [Issues] in the format of `See #1234` in your commit description.
 
 ## Bug Reports
 
-* **Do** report vulnerabilities in Rapid7 software directly to security@rapid7.com.
+Please report vulnerabilities in Rapid7 software directly to security@rapid7.com. For more on our disclosure policy and Rapid7's approach to coordinated disclosure, [head over here](https://www.rapid7.com/security).
+
+When reporting Metasploit issues:
 * **Do** write a detailed description of your bug and use a descriptive title.
-* **Do** include reproduction steps, stack traces, and anything else that might help us verify and fix your bug.
+* **Do** include reproduction steps, stack traces, and anything that might help us fix your bug.
 * **Don't** file duplicate reports; search for your bug before filing a new report.
+* **Don't** attempt to report issues on a closed PR.
 
-If you need some more guidance, talk to the main body of open
-source contributors over on the [Freenode IRC channel],
-or e-mail us at the [metasploit-hackers] mailing list.
+If you need some more guidance, talk to the main body of open source contributors over on our
+[GitHub Discussions](https://github.com/rapid7/metasploit-framework/discussions) or [Metasploit Slack]
 
-Also, **thank you** for taking the few moments to read this far! You're
-already way ahead of the curve, so keep it up!
+Finally, **thank you** for taking the few moments to read this far! You're already way ahead of the
+curve, so keep it up!
 
-[Issue Tracker]:http://r-7.co/MSF-BUGv1
-[PGP key]:http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0x2380F85B8AD4DB8D
-[wiki]:https://github.com/rapid7/metasploit-framework/wiki
-[scripts]:https://github.com/rapid7/metasploit-framework/tree/master/scripts
-[development environment setup]:http://r-7.co/MSF-DEV
-[Common Coding Mistakes]:https://github.com/rapid7/metasploit-framework/wiki/Common-Metasploit-Module-Coding-Mistakes
+[Code of Conduct]:https://docs.metasploit.com/docs/code-of-conduct.html
+[Submit bugs and feature requests]:http://r-7.co/MSF-BUGv1
+[Help fellow users with open issues]:https://github.com/rapid7/metasploit-framework/issues
+[help fellow committers test recently submitted pull requests]:https://github.com/rapid7/metasploit-framework/pulls
+[Report a security vulnerability in Metasploit itself]:https://www.rapid7.com/disclosure.jsp
+[development environment]:http://r-7.co/MSF-DEV
+[proof-of-concept exploits]:https://www.exploit-db.com/search?verified=true&hasapp=true&nomsf=true
 [Ruby style guide]:https://github.com/bbatsov/ruby-style-guide
 [Rubocop]:https://rubygems.org/search?query=rubocop
 [50/72 rule]:http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [topic branch]:http://git-scm.com/book/en/Git-Branching-Branching-Workflows#Topic-Branches
-[console output]:https://help.github.com/articles/github-flavored-markdown#fenced-code-blocks
-[verification steps]:https://help.github.com/articles/writing-on-github#task-lists
+[draft PR]:https://help.github.com/en/articles/about-pull-requests#draft-pull-requests
+[console output]:https://docs.github.com/en/free-pro-team@latest/github/writing-on-github/creating-and-highlighting-code-blocks#fenced-code-blocks
+[verification steps]:https://docs.github.com/en/free-pro-team@latest/github/writing-on-github/basic-writing-and-formatting-syntax#task-lists
 [reference associated issues]:https://github.com/blog/1506-closing-issues-via-pull-requests
-[release notes]:https://github.com/rapid7/metasploit-framework/wiki/Adding-Release-Notes-to-PRs
-[PR#2940]:https://github.com/rapid7/metasploit-framework/pull/2940
-[PR#3043]:https://github.com/rapid7/metasploit-framework/pull/3043
+[PR#9966]:https://github.com/rapid7/metasploit-framework/pull/9966
 [pre-commit hook]:https://github.com/rapid7/metasploit-framework/blob/master/tools/dev/pre-commit-hook.rb
 [API]:https://rapid7.github.io/metasploit-framework/api
+[module documentation]:https://docs.metasploit.com/docs/using-metasploit/basics/module-documentation.html
+[scripts]:https://github.com/rapid7/metasploit-framework/tree/master/scripts
 [RSpec]:http://rspec.info
-[Better Specs]:http://betterspecs.org
+[Better Specs]:http://www.betterspecs.org/
 [YARD]:http://yardoc.org
 [Issues]:https://github.com/rapid7/metasploit-framework/issues
-[Freenode IRC channel]:http://webchat.freenode.net/?channels=%23metasploit&uio=d4
-[metasploit-hackers]:https://lists.sourceforge.net/lists/listinfo/metasploit-hackers
+[Metasploit Slack]:https://www.metasploit.com/slack

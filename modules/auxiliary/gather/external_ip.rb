@@ -1,11 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-
-require 'msf/core'
-
 
 class MetasploitModule < Msf::Auxiliary
 
@@ -15,31 +11,32 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        	=> 'Discover External IP via Ifconfig.me',
+      'Name' => 'Discover External IP via Ifconfig.me',
       'Description'	=> %q{
         This module checks for the public source IP address of the current
         route to the RHOST by querying the public web application at ifconfig.me.
         It should be noted this module will register activity on ifconfig.me,
         which is not affiliated with Metasploit.
       },
-      'Author'        => ['RageLtMan'],
+      'Author' => ['RageLtMan <rageltman[at]sempervictus>'],
       'License'	=> MSF_LICENSE,
-      'References'	=>
-        [
-          [ 'URL', 'http://ifconfig.me/ip' ],
-        ]
+      'References' => [
+        [ 'URL', 'http://ifconfig.me/ip' ],
+      ],
+      'DefaultOptions' => { 'VHOST' => 'ifconfig.me' }
     )
 
     register_options(
       [
         Opt::RHOST('ifconfig.me'),
         OptBool.new('REPORT_HOST', [false, 'Add the found IP to the database', false])
-      ], self.class)
-end
+      ]
+    )
+  end
 
   def run
     connect
-    res = send_request_cgi({'uri' => '/ip', 'method' => 'GET' })
+    res = send_request_cgi({ 'uri' => '/ip', 'method' => 'GET' })
 
     if res.nil?
       print_error("Connection timed out")
@@ -52,5 +49,4 @@ end
       report_host(our_addr) if datastore['REPORT_HOST']
     end
   end
-
 end

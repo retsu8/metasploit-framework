@@ -1,34 +1,37 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-
-require 'msf/core'
-
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Udp
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Citrix MetaFrame ICA Published Applications Scanner',
-      'Description'    => %q{
-        This module attempts to query Citrix Metaframe ICA server to obtain
-        a published list of applications.
-      },
-      'Author'         => [ 'patrick' ],
-      'References'     =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'Citrix MetaFrame ICA Published Applications Scanner',
+        'Description' => %q{
+          This module attempts to query Citrix Metaframe ICA server to obtain
+          a published list of applications.
+        },
+        'Author' => [ 'aushack' ],
+        'References' => [
           [ 'URL', 'http://www.securiteam.com/exploits/5CP0B1F80S.html' ],
-        ]
-    ))
+        ],
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         Opt::RPORT(1604),
-      ], self.class)
+      ]
+    )
   end
 
   def autofilter
@@ -51,7 +54,7 @@ class MetasploitModule < Msf::Auxiliary
     udp_sock.put(client_connect)
     res = udp_sock.get(3)
 
-    if (res[0,server_response.length] == server_response)
+    if (res[0, server_response.length] == server_response)
       print_status("Citrix MetaFrame ICA server detected. Requesting Published Applications list...")
 
       find_published =
@@ -67,7 +70,7 @@ class MetasploitModule < Msf::Auxiliary
       res = udp_sock.get(3)
 
       if (res.index(server_list_pre) == 0) # good packet, with following data
-        print_status("Citrix Applications Reported:\r\n" + res[server_list_pre.length,res.length].gsub("\x00","\r\n"))
+        print_status("Citrix Applications Reported:\r\n" + res[server_list_pre.length, res.length].gsub("\x00", "\r\n"))
       end
     else
       print_error("Citrix did not report any Published Applications. Try the brute force module instead.")
@@ -75,5 +78,4 @@ class MetasploitModule < Msf::Auxiliary
 
     disconnect_udp
   end
-
 end

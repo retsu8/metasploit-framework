@@ -1,14 +1,20 @@
+<!-- See https://github.com/rapid7/metasploit-framework/blob/master/CONTRIBUTING.md for contribution guidelines. Keep unfinished work in draft. -->
 
-Tell us what this change does. If you're fixing a bug, please mention
-the github issue number.
+## Description
+
+<!-- Describe what this change does and why it is needed. Link related issues and explain breaking changes and migration steps. State any AI tools used and their role, or "None". -->
+
+## Setup and Reproduction (if applicable)
+
+<!-- Give steps to reproduce the bug or set up a test target, including exact software versions, required configuration, and how to obtain lab credentials. A link to existing instructions in an issue or module documentation is enough. Delete this section if it does not apply. -->
 
 ## Verification
 
-List the steps needed to make sure this thing works
+<!-- Replace the placeholders with steps a reviewer can follow. Add or remove steps as needed. Leave all verification checkboxes unchecked, even if you have already performed the steps; reviewers check them off as they complete them. Report your own checks under Results and evidence below. Keep the steps proportional to the change; for documentation changes, describe what to inspect or preview. -->
 
-- [ ] Start `msfconsole`
-- [ ] `use exploit/windows/smb/ms08_067_netapi`
-- [ ] ...
-- [ ] **Verify** the thing does what it should
-- [ ] **Verify** the thing does not do what it should not
+- [ ] Run `<command or action>` and confirm `<expected observable result>`.
+- [ ] Exercise `<relevant failure or regression case, if applicable>` and confirm `<expected result>`.
 
+### Results and evidence
+
+<!-- Describe what you actually tested and what happened. Include sanitized console output, screenshots, or CI links. For module behavior changes, include check output (if supported) and run/exploit output. For documentation changes, a brief inspection or preview result is enough. Note anything untested. -->

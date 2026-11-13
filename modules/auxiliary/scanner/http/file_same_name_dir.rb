@@ -1,39 +1,43 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'rex/proto/http'
-require 'msf/core'
-
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::WmapScanDir
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'   		=> 'HTTP File Same Name Directory Scanner',
-      'Description'	=> %q{
-        This module identifies the existence of files
-        in a given directory path named as the same name of the
-        directory.
+    super(
+      update_info(
+        info,
+        'Name' => 'HTTP File Same Name Directory Scanner',
+        'Description'	=> %q{
+          This module identifies the existence of files
+          in a given directory path named as the same name of the
+          directory.
 
-        Only works if PATH is differenet than '/'.
-      },
-      'Author' 		=> [ 'et [at] metasploit.com' ],
-      'License'		=> BSD_LICENSE))
+          Only works if PATH is different than '/'.
+        },
+        'Author' => [ 'et [at] metasploit.com' ],
+        'License'	=> BSD_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
-        OptString.new('PATH', [ true,  "The directory path  to identify files", '/']),
+        OptString.new('PATH', [ true, "The directory path  to identify files", '/']),
         OptString.new('EXT', [ true, "File extension to use", '.aspx']),
 
-      ], self.class)
-
+      ]
+    )
   end
 
   def run_host(ip)
@@ -66,12 +70,12 @@ class MetasploitModule < Msf::Auxiliary
 
     tpath = normalize_uri(datastore['PATH'])
 
-    if tpath.eql? "/"||""
+    if tpath.eql? "/" || ""
       print_error("Blank or default PATH set.");
       return
     end
 
-    if tpath[-1,1] != '/'
+    if tpath[-1, 1] != '/'
       tpath += '/'
     end
 
@@ -83,39 +87,36 @@ class MetasploitModule < Msf::Auxiliary
       begin
         testfext = testf.chomp + ext
         res = send_request_cgi({
-          'uri'  		=>  tpath+testfext,
-          'method'   	=> 'GET',
-          'ctype'		=> 'text/plain'
+          'uri' => tpath + testfext,
+          'method' => 'GET',
+          'ctype'	=> 'text/plain'
         }, 20)
 
         if (res and res.code >= 200 and res.code < 300)
-          print_status("Found #{wmap_base_url}#{tpath}#{testfext}")
+          print_good("Found #{wmap_base_url}#{tpath}#{testfext}")
 
           report_web_vuln(
             :host	=> ip,
             :port	=> rport,
-            :vhost  => vhost,
-            :ssl    => ssl,
+            :vhost => vhost,
+            :ssl => ssl,
             :path	=> "#{tpath}#{testfext}",
             :method => 'GET',
-            :pname  => "",
-            :proof  => "Res code: #{res.code.to_s}",
-            :risk   => 0,
-            :confidence   => 100,
-            :category     => 'file',
-            :description  => 'File found.',
-            :name   => 'file'
+            :pname => "",
+            :proof => "Res code: #{res.code.to_s}",
+            :risk => 0,
+            :confidence => 100,
+            :category => 'file',
+            :description => 'File found.',
+            :name => 'file'
           )
 
         else
           vprint_status("NOT Found #{wmap_base_url}#{tpath}#{testfext}")
         end
-
       rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
       rescue ::Timeout::Error, ::Errno::EPIPE
       end
-
     }
-
   end
 end

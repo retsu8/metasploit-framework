@@ -2,37 +2,29 @@
 # nessus_ntp_login.rb
 ##
 
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Tcp
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::AuthBrute
 
   def initialize
-  super(
-    'Name'        => 'Nessus NTP Login Utility',
-    'Description' => 'This module attempts to authenticate to a Nessus NTP service.',
-    'Author'         => [ 'Vlatko Kosturjak <kost[at]linux.hr>' ],
-    'License'        => MSF_LICENSE
-  )
-  register_options(
-    [
-      Opt::RPORT(1241),
-      OptBool.new('BLANK_PASSWORDS', [false, "Try blank passwords for all users", false])
-    ], self.class)
-
-  register_advanced_options(
-  [
-    OptBool.new('SSL', [ true, "Negotiate SSL for outgoing connections", true]),
-    OptString.new('SSLVersion', [ true, " Specify the version of SSL that should be used", "TLS1"])
-  ], self.class)
+    super(
+      'Name' => 'Nessus NTP Login Utility',
+      'Description' => 'This module attempts to authenticate to a Nessus NTP service.',
+      'Author' => [ 'Vlatko Kosturjak <kost[at]linux.hr>' ],
+      'License' => MSF_LICENSE
+    )
+    register_options(
+      [
+        Opt::RPORT(1241),
+        OptBool.new('BLANK_PASSWORDS', "Try blank passwords for all users")
+      ]
+    )
   end
 
   def run_host(ip)
@@ -42,23 +34,23 @@ class MetasploitModule < Msf::Auxiliary
         do_login(user, pass)
       end
     end
-    rescue ::Rex::ConnectionError
-    rescue ::Exception => e
-      vprint_error("#{msg} #{e.to_s} #{e.backtrace}")
+  rescue ::Rex::ConnectionError
+  rescue ::Exception => e
+    vprint_error("#{msg} #{e.to_s} #{e.backtrace}")
   end
 
-  def ntp_send(data=nil, con=true)
+  def ntp_send(data = nil, con = true)
     begin
-      @result=''
-      @coderesult=''
+      @result = ''
+      @coderesult = ''
       if (con)
-        @connected=false
+        @connected = false
         connect
-        select(nil,nil,nil,0.4)
+        select(nil, nil, nil, 0.4)
       end
-      @connected=true
+      @connected = true
       sock.put(data)
-      @result=sock.get_once
+      @result = sock.get_once
     rescue ::Exception => err
       print_error("#{msg} Error: #{err.to_s}")
     end
@@ -91,24 +83,24 @@ class MetasploitModule < Msf::Auxiliary
     create_credential_login(login_data)
   end
 
-  def do_login(user=nil,pass=nil)
+  def do_login(user = nil, pass = nil)
     begin
-      ntp_send("< NTP/1.0 >\n",true) # send hello
+      ntp_send("< NTP/1.0 >\n", true) # send hello
       if @result !~ /\<\ NTP\/1\.0 \>/
         print_error("#{msg} Nessus NTP does not appear to be running: did not get response to NTP hello: #{@result}")
         return :abort
       end
 
       vprint_status("#{msg} Trying user:'#{user}' with password:'#{pass}'")
-      ntp_send(nil,!@connected)
+      ntp_send(nil, !@connected)
       if @result !~ /User\ \:/
         print_error("#{msg} Nessus NTP did not send User request: #{@result}")
       end
-      ntp_send("#{user}\n",!@connected)
+      ntp_send("#{user}\n", !@connected)
       if @result !~ /Password\ \:/
         print_error("#{msg} Nessus NTP did not send Password request: #{@result}")
       end
-      ntp_send("#{pass}\n",!@connected)
+      ntp_send("#{pass}\n", !@connected)
       if @result =~ /SERVER <|>.*<|> SERVER/is
         print_good("#{msg} SUCCESSFUL login for '#{user}' : '#{pass}'")
         report_cred(
@@ -131,8 +123,8 @@ class MetasploitModule < Msf::Auxiliary
         vprint_error("#{msg} Rejected user: '#{user}' with password: '#{pass}': #{@result}")
         return :fail
       end
-      rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
-      rescue ::Timeout::Error, ::Errno::EPIPE
+    rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
+    rescue ::Timeout::Error, ::Errno::EPIPE
     end
   end
 

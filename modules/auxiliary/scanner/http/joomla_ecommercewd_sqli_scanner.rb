@@ -1,39 +1,45 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
 require 'uri'
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'        => 'Web-Dorado ECommerce WD for Joomla! search_category_id SQL Injection Scanner',
-      'Description' => %q{
-      This module will scan for hosts vulnerable to an unauthenticated SQL injection within the
-      advanced search feature of the Web-Dorado ECommerce WD 1.2.5 and likely prior.
-      },
-      'Author'       =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'Web-Dorado ECommerce WD for Joomla! search_category_id SQL Injection Scanner',
+        'Description' => %q{
+          This module will scan for hosts vulnerable to an unauthenticated SQL injection within the
+          advanced search feature of the Web-Dorado ECommerce WD 1.2.5 and likely prior.
+        },
+        'Author' => [
           'bperry'
         ],
-      'License'     => MSF_LICENSE,
-      'References'  =>
-        [
+        'License' => MSF_LICENSE,
+        'References' => [
           ['CVE', '2015-2562']
         ],
-      'DisclosureDate' => 'Mar 20 2015'))
+        'DisclosureDate' => '2015-03-20',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
-      register_options(
-        [
-          OptString.new('TARGETURI', [ true,  "The path to the Joomla install", '/'])
-        ], self.class)
+    register_options(
+      [
+        OptString.new('TARGETURI', [ true, "The path to the Joomla install", '/'])
+      ]
+    )
   end
 
   def run_host(ip)
@@ -77,14 +83,12 @@ class MetasploitModule < Msf::Auxiliary
     if result
       print_good("Vulnerable to CVE-2015-2562 (search_category_id parameter SQL injection)")
       report_vuln({
-        :host  => rhost,
-        :port  => rport,
+        :host => rhost,
+        :port => rport,
         :proto => 'tcp',
-        :name  => "Web-Dorado ECommerce WD search_category_id SQL injection",
-        :refs  => self.references.select { |ref| ref.ctx_val == "2015-2562" }
+        :name => "Web-Dorado ECommerce WD search_category_id SQL injection",
+        :refs => self.references.select { |ref| ref.ctx_val == "2015-2562" }
       })
     end
-
   end
-
 end

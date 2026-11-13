@@ -1,12 +1,9 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Tcp
   include Msf::Auxiliary::WmapScanSSL
   include Msf::Auxiliary::Scanner
@@ -14,9 +11,9 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'HTTP SSL Certificate Checker',
-      'Author'      => 'nebulus',
-      'License'     => MSF_LICENSE,
+      'Name' => 'HTTP SSL Certificate Checker',
+      'Author' => 'nebulus',
+      'License' => MSF_LICENSE,
       'Description' => %q{
           This module will check the certificate of the specified web servers
         to ensure the subject and issuer match the supplied pattern and that the certificate
@@ -27,19 +24,19 @@ class MetasploitModule < Msf::Auxiliary
     register_options(
       [
         Opt::RPORT(443),
-        OptRegexp.new('ISSUER', [ true,  "Show a warning if the Issuer doesn't match this regex", '.*']),
+        OptRegexp.new('ISSUER', [ true, "Show a warning if the Issuer doesn't match this regex", '.*']),
         OptBool.new('SHOWALL', [ false, "Show all certificates (issuer,time) regardless of match", false]),
-      ], self.class)
+      ]
+    )
   end
 
   # Fingerprint a single host
   def run_host(ip)
-
-    connect(true, {"SSL" => true}) #Force SSL
-    cert  = OpenSSL::X509::Certificate.new(sock.peer_cert)
+    connect(true, { "SSL" => true }) # Force SSL
+    cert = OpenSSL::X509::Certificate.new(sock.peer_cert)
     disconnect
 
-    if(not cert)
+    if (not cert)
       print_status("#{ip} No certificate subject or CN found")
       return
     end
@@ -60,15 +57,15 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     if cert.issuer.to_s !~ /#{datastore['ISSUER'].source}/n
-      print_good("#{ip} - '#{vhostn}' : #{cert.issuer} (BAD ISSUER)" )
+      print_good("#{ip} - '#{vhostn}' : #{cert.issuer} (BAD ISSUER)")
     elsif datastore['SHOWALL']
       # show verbose as status
       print_status("#{ip} - '#{vhostn}' : #{cert.issuer}")
     end
 
-    if ( a < 1 or b > 0 )
+    if (a < 1 or b > 0)
       print_good("#{ip} - '#{vhostn}' : '" + before.to_s + "' - '" + after.to_s + "' (EXPIRED)'")
-    elsif
+    else
       # show verbose as status
       print_status("#{ip} - '#{vhostn}' : '" + before.to_s + "' - '" + after.to_s + "'")
     end
@@ -76,20 +73,20 @@ class MetasploitModule < Msf::Auxiliary
     report_note(
       :host	=> ip,
       :port	=> rport,
-      :proto  => 'tcp',
+      :proto => 'tcp',
       :type	=> 'http.vhost',
-      :data	=> {:name => vhostn}
+      :data	=> { :name => vhostn }
     ) if vhostn
 
     # Store the SSL certificate itself
     report_note(
       :host	=> ip,
-      :proto  => 'tcp',
+      :proto => 'tcp',
       :port	=> rport,
       :type	=> 'ssl.certificate',
       :data	=> {
-        :cn        => vhostn,
-        :subject   => cert.subject.to_a,
+        :cn => vhostn,
+        :subject => cert.subject.to_a,
         :algorithm => cert.signature_algorithm
 
       }
@@ -102,15 +99,13 @@ class MetasploitModule < Msf::Auxiliary
         :name => vhostn
       )
     end
-
-
   rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
   rescue ::Timeout::Error, ::Errno::EPIPE
   rescue ::OpenSSL::SSL::SSLError => e
-    return if(e.to_s.match(/^SSL_connect /) ) # strange errors / exception if SSL connection aborted
+    return if (e.to_s.match(/^SSL_connect /)) # strange errors / exception if SSL connection aborted
   rescue ::Exception => e
-    return if(e.to_s =~ /execution expired/)
+    return if (e.to_s =~ /execution expired/)
+
     print_error("Error: '#{ip}' '#{e.class}' '#{e}' '#{e.backtrace}'")
   end
-
 end

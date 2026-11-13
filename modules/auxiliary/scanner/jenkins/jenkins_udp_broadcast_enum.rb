@@ -1,12 +1,9 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Udp
   include Msf::Auxiliary::Report
 
@@ -14,27 +11,30 @@ class MetasploitModule < Msf::Auxiliary
     super(
       update_info(
         info,
-        'Name'           => 'Jenkins Server Broadcast Enumeration',
-        'Description'    => %q(
-            This module sends out a udp broadcast packet querying for
-            any Jenkins servers on the local network.
-            Be advised that while this module does not identify the
-            port on which Jenkins is running, the default port for
-            Jenkins is 8080.
-        ),
-        'Author'         =>
-          [
-            'Adam Compton <adam_compton@rapid7.com>',
-            'Matt Schmidt <matt_schmidt@rapid7.com>'
-          ],
-        'References'     =>
-          [
-            [ 'URL', 'https://wiki.jenkins-ci.org/display/JENKINS/Auto-discovering+Jenkins+on+the+network' ]
-          ],
-        'License'        => MSF_LICENSE
+        'Name' => 'Jenkins Server Broadcast Enumeration',
+        'Description' => %q{
+          This module sends out a udp broadcast packet querying for
+          any Jenkins servers on the local network.
+          Be advised that while this module does not identify the
+          port on which Jenkins is running, the default port for
+          Jenkins is 8080.
+        },
+        'Author' => [
+          'Adam Compton <adam_compton@rapid7.com>',
+          'Matt Schmidt <matt_schmidt@rapid7.com>'
+        ],
+        'References' => [
+          [ 'URL', 'https://wiki.jenkins-ci.org/display/JENKINS/Auto-discovering+Jenkins+on+the+network' ]
+        ],
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
       )
     )
-    deregister_options('RHOST', 'RPORT')
+    deregister_udp_options
   end
 
   def parse_reply(pkt)
@@ -51,7 +51,7 @@ class MetasploitModule < Msf::Auxiliary
 
     # if a version was identified, then out and store to DB
     if ver
-      print_status("#{pkt[1]} - Found Jenkins Server #{ver} Version")
+      print_good("#{pkt[1]} - Found Jenkins Server #{ver} Version")
       report_host(
         host: pkt[1],
         info: "Jenkins v.#{ver} (port typically 8080)"
@@ -68,8 +68,8 @@ class MetasploitModule < Msf::Auxiliary
 
     # loop a few times to account for multiple or slow responders
     iter = 0
-    while (r = udp_sock.recvfrom(65535, 0.1)) && (iter < 20)
-      parse_reply(r)
+    while (r = udp_sock.timed_recvfrom(65535, 0.1)) && (iter < 20)
+      parse_reply([r[0], r[1][3], r[1][1]])
       iter += 1
     end
   end

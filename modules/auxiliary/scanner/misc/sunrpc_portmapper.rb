@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::SunRPC
@@ -12,47 +10,52 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'SunRPC Portmap Program Enumerator',
+      'Name' => 'SunRPC Portmap Program Enumerator',
       'Description' => '
         This module calls the target portmap service and enumerates all program
         entries and their running port numbers.
       ',
-      'Author'      => ['<tebo[at]attackresearch.com>'],
-      'References'  =>
-        [
-          ['URL',	'http://www.ietf.org/rfc/rfc1057.txt']
-        ],
+      'Author' => ['<tebo[at]attackresearch.com>'],
+      'References' => [
+        ['URL',	'https://www.ietf.org/rfc/rfc1057.txt']
+      ],
       'License'	=> MSF_LICENSE
     )
+
+    register_options([
+      OptEnum.new('PROTOCOL', [true, 'Protocol to use', 'tcp', %w[tcp udp]]),
+    ])
   end
 
   def run_host(ip)
     peer = "#{ip}:#{rport}"
+    proto = datastore['PROTOCOL']
     vprint_status "SunRPC - Enumerating programs"
 
     begin
-      program		= 100000
-      progver		= 2
+      program	= 100000
+      progver	= 2
       procedure	= 4
 
-      sunrpc_create('udp', program, progver)
+      sunrpc_create(proto, program, progver)
       sunrpc_authnull
       resp = sunrpc_call(procedure, "")
 
       progs = resp[3, 1].unpack('C')[0]
       maps = []
       if (progs == 0x01)
-        while XDR.decode_int!(resp) == 1
-          maps << XDR.decode!(resp, Integer, Integer, Integer, Integer)
+        while Rex::Encoder::XDR.decode_int!(resp) == 1
+          maps << Rex::Encoder::XDR.decode!(resp, Integer, Integer, Integer, Integer)
         end
       end
       sunrpc_destroy
       return if maps.empty?
+
       vprint_good("Found #{maps.size} programs available")
 
       table = Rex::Text::Table.new(
-        'Header'  => "SunRPC Programs for #{ip}",
-        'Indent'  => 1,
+        'Header' => "SunRPC Programs for #{ip}",
+        'Indent' => 1,
         'Columns' => %w(Name Number Version Port Protocol)
       )
 

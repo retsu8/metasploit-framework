@@ -12,11 +12,27 @@ RSpec.describe Metasploit::Framework::LoginScanner::Base do
     end
   }
 
+  let(:cred_collection) {
+    creds = double('Metasploit::Framework::CredentialCollection')
+    allow(creds).to receive(:pass_file)
+    allow(creds).to receive(:username).and_return('user')
+    allow(creds).to receive(:password).and_return('pass')
+    allow(creds).to receive(:user_file)
+    allow(creds).to receive(:userpass_file)
+    allow(creds).to receive(:prepended_creds).and_return([])
+    allow(creds).to receive(:additional_privates).and_return(['pass'])
+    allow(creds).to receive(:additional_publics).and_return(['user'])
+    allow(creds).to receive(:each).and_return(['user', 'pass'])
+    allow(creds).to receive(:additional_publics).and_return([])
+    allow(creds).to receive(:empty?).and_return(false)
+    creds
+  }
+
   let(:options) {
 
     {
       connection_timeout: 1,
-      cred_details: ["user", "pass"],
+      cred_details: cred_collection,
       host: '1.2.3.4',
       port: 4444,
       stop_on_success: true,
@@ -30,6 +46,38 @@ RSpec.describe Metasploit::Framework::LoginScanner::Base do
   }
 
   it { is_expected.to respond_to :bruteforce_speed }
+
+  describe '#scan! error reporting' do
+    it 'uses the default warning prefix when the framework module has no peer' do
+      credential = Metasploit::Framework::Credential.new(
+        public: 'user',
+        private: 'pass'
+      )
+      framework_module = double('framework module')
+      allow(framework_module).to receive(:print_warning)
+
+      scanner_class = Class.new(base_class) do
+        const_set(:REALM_KEY, nil)
+        const_set(:DEFAULT_REALM, nil)
+      end
+
+      scanner = scanner_class.new(options.merge(
+        framework_module: framework_module,
+        cred_details: [credential]
+      ))
+
+      allow(scanner).to receive(:attempt_login)
+        .and_raise(RuntimeError, 'unexpected scanner failure')
+
+      expect(framework_module).to receive(:print_warning) do |message, **kwargs|
+        expect(kwargs).to be_empty
+        expect(message).to start_with('LOGIN FAILED:')
+        expect(message).to include('unexpected scanner failure')
+      end
+
+      scanner.scan!
+    end
+  end
 
   context 'validations' do
 

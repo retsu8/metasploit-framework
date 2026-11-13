@@ -1,43 +1,38 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-
-require 'msf/core'
-require 'rex/proto/ipmi'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::UDPScanner
 
   def initialize
     super(
-      'Name'        => 'IPMI 2.0 Cipher Zero Authentication Bypass Scanner',
+      'Name' => 'IPMI 2.0 Cipher Zero Authentication Bypass Scanner',
       'Description' => %q|
-        This module identifies IPMI 2.0 compatible systems that are vulnerable
+        This module identifies IPMI 2.0-compatible systems that are vulnerable
         to an authentication bypass vulnerability through the use of cipher
         zero.
         |,
-      'Author'      => [ 'Dan Farmer <zen[at]fish2.com>', 'hdm' ],
-      'License'     => MSF_LICENSE,
-      'References'  =>
-        [
-          ['URL', 'http://fish2.com/ipmi/cipherzero.html'],
-          ['OSVDB', '93038'],
-          ['OSVDB', '93039'],
-          ['OSVDB', '93040'],
+      'Author' => [ 'Dan Farmer <zen[at]fish2.com>', 'hdm' ],
+      'License' => MSF_LICENSE,
+      'References' => [
+        ['CVE', '2013-4782'],
+        ['URL', 'http://fish2.com/ipmi/cipherzero.html'],
+        ['OSVDB', '93038'],
+        ['OSVDB', '93039'],
+        ['OSVDB', '93040'],
 
-        ],
-      'DisclosureDate' => 'Jun 20 2013'
+      ],
+      'DisclosureDate' => '2013-06-20'
     )
 
     register_options(
-    [
-      Opt::RPORT(623)
-    ], self.class)
-
+      [
+        Opt::RPORT(623)
+      ]
+    )
   end
 
   def scanner_prescan(batch)
@@ -54,9 +49,18 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def scanner_process(data, shost, sport)
-    info = Rex::Proto::IPMI::Open_Session_Reply.new(data) rescue nil
-    return if not info
-    return if not info.session_payload_type == Rex::Proto::IPMI::PAYLOAD_RMCPPLUSOPEN_REP
+    info = nil
+
+    begin
+      info = Rex::Proto::IPMI::Open_Session_Reply.new.read(data)
+    rescue IOError, BinData::ValidityError => e
+      # Truncated replies raise IOError ("data truncated") or EOFError (a subclass
+      # of IOError); replies that fail a BinData assertion raise ValidityError.
+      vprint_error("#{Rex::Socket.to_authority(shost, sport)} - IPMI - Malformed open session reply: #{e.class}: #{e.message}")
+      return nil
+    end
+
+    return unless info && info.session_payload_type == Rex::Proto::IPMI::PAYLOAD_RMCPPLUSOPEN_REP
 
     # Ignore duplicate replies
     return if @res[shost]
@@ -64,18 +68,18 @@ class MetasploitModule < Msf::Auxiliary
     @res[shost] ||= info
 
     if info.error_code == 0
-      print_good("#{shost}:#{sport} - IPMI - VULNERABLE: Accepted a session open request for cipher zero")
+      print_good("#{Rex::Socket.to_authority(shost, sport)} - IPMI - VULNERABLE: Accepted a session open request for cipher zero")
       report_vuln(
-        :host  => shost,
-        :port  => datastore['RPORT'].to_i,
+        :host => shost,
+        :port => datastore['RPORT'].to_i,
         :proto => 'udp',
         :sname => 'ipmi',
-        :name  => 'IPMI 2.0 RAKP Cipher Zero Authentication Bypass',
-        :info  => "Accepted a session open request for cipher zero",
-        :refs  => self.references
+        :name => 'IPMI 2.0 RAKP Cipher Zero Authentication Bypass',
+        :info => "Accepted a session open request for cipher zero",
+        :refs => self.references
       )
     else
-      vprint_status("#{shost}:#{sport} - IPMI - NOT VULNERABLE: Rejected cipher zero with error code #{info.error_code}")
+      vprint_status("#{Rex::Socket.to_authority(shost, sport)} - IPMI - NOT VULNERABLE: Rejected cipher zero with error code #{info.error_code}")
     end
   end
 end

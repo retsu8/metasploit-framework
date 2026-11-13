@@ -1,9 +1,8 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
 require 'active_support/inflector'
 require 'json'
 require 'active_support/core_ext/hash'
@@ -34,10 +33,10 @@ class MetasploitModule < Msf::Auxiliary
       cli = Rex::Proto::Http::Client.new(api_host, api_port, {}, true, 'TLS')
       cli.connect
       req = cli.request_cgi({
-          'uri' => uri,
-          'agent' => user_agent,
-          'method' => 'GET',
-          'vars_get' => params
+        'uri' => uri,
+        'agent' => user_agent,
+        'method' => 'GET',
+        'vars_get' => params
       })
       res = cli.send_recv(req)
       cli.close
@@ -47,6 +46,7 @@ class MetasploitModule < Msf::Auxiliary
         @current_assessments = res.headers['X-Current-Assessments']
         r = JSON.load(res.body)
         fail InvocationError, "API returned: #{r['errors']}" if r.key?('errors')
+
         return r
       end
 
@@ -66,20 +66,34 @@ class MetasploitModule < Msf::Auxiliary
       end
     end
 
+    def report_unused_attrs(type, unused_attrs)
+      unused_attrs.each do |attr|
+        # $stderr.puts "#{type} request returned unknown parameter #{attr}"
+      end
+    end
+
     def info
-      Info.load request(:info)
+      obj, unused_attrs = Info.load request(:info)
+      report_unused_attrs('info', unused_attrs)
+      obj
     end
 
     def analyse(params = {})
-      Host.load request(:analyze, params)
+      obj, unused_attrs = Host.load request(:analyze, params)
+      report_unused_attrs('analyze', unused_attrs)
+      obj
     end
 
     def get_endpoint_data(params = {})
-      Endpoint.load request(:get_endpoint_data, params)
+      obj, unused_attrs = Endpoint.load request(:get_endpoint_data, params)
+      report_unused_attrs('get_endpoint_data', unused_attrs)
+      obj
     end
 
     def get_status_codes
-      StatusCodes.load request(:get_status_codes)
+      obj, unused_attrs = StatusCodes.load request(:get_status_codes)
+      report_unused_attrs('get_status_codes', unused_attrs)
+      obj
     end
   end
 
@@ -143,18 +157,30 @@ class MetasploitModule < Msf::Auxiliary
 
     def self.load(attributes = {})
       obj = self.new
+      unused_attrs = []
       attributes.each do |name, value|
         if @fields.include?(name)
           obj.instance_variable_set("@#{name}", value)
         elsif @lists.key?(name)
-          obj.instance_variable_set("@#{name}", value.map { |v| @lists[name].load(v) }) unless value.nil?
+          unless value.nil?
+            var = value.map do |v|
+              val, ua = @lists[name].load(v)
+              unused_attrs.concat ua
+              val
+            end
+            obj.instance_variable_set("@#{name}", var)
+          end
         elsif @refs.key?(name)
-          obj.instance_variable_set("@#{name}", @refs[name].load(value)) unless value.nil?
+          unless value.nil?
+            val, ua = @refs[name].load(value)
+            unused_attrs.concat ua
+            obj.instance_variable_set("@#{name}", val)
+          end
         else
-          fail ArgumentError, "#{name} is not an attribute of object #{self.name}"
+          unused_attrs << name
         end
       end
-      obj
+      return obj, unused_attrs
     end
 
     def to_json(opts = {})
@@ -185,7 +211,10 @@ class MetasploitModule < Msf::Auxiliary
                :sgc?,
                :validationType,
                :issues,
-               :sct?
+               :sct?,
+               :mustStaple,
+               :sha1Hash,
+               :pinSha256
 
     def valid?
       issues == 0
@@ -211,7 +240,9 @@ class MetasploitModule < Msf::Auxiliary
                :revocationStatus,
                :crlRevocationStatus,
                :ocspRevocationStatus,
-               :raw
+               :raw,
+               :sha1Hash,
+               :pinSha256
 
     def valid?
       issues == 0
@@ -274,7 +305,8 @@ class MetasploitModule < Msf::Auxiliary
                :clientMaxAssessments,
                :maxAssessments,
                :currentAssessments,
-               :messages
+               :messages,
+               :newAssessmentCoolOff
   end
 
   class SimClient < ApiObject
@@ -290,7 +322,8 @@ class MetasploitModule < Msf::Auxiliary
     has_fields :errorCode,
                :attempts,
                :protocolId,
-               :suiteId
+               :suiteId,
+               :kxInfo
 
     def success?
       error_code == 0
@@ -377,7 +410,23 @@ class MetasploitModule < Msf::Auxiliary
                :poodleTls,
                :fallbackScsv?,
                :freak?,
-               :hasSct
+               :hasSct,
+               :stsStatus,
+               :stsPreload,
+               :supportsAlpn,
+               :rc4Only,
+               :protocolIntolerance,
+               :miscIntolerance,
+               :openSSLLuckyMinus20,
+               :logjam,
+               :chaCha20Preference,
+               :hstsPolicy,
+               :hstsPreloads,
+               :hpkpPolicy,
+               :hpkpRoPolicy,
+               :drownHosts,
+               :drownErrors,
+               :drownVulnerable
   end
 
   class Endpoint < ApiObject
@@ -414,24 +463,30 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def initialize(info = {})
-    super(update_info(info,
-        'Name'          => 'SSL Labs API Client',
-        'Description'   => %q{
+    super(
+      update_info(
+        info,
+        'Name' => 'SSL Labs API Client',
+        'Description' => %q{
           This module is a simple client for the SSL Labs APIs, designed for
           SSL/TLS assessment during a penetration test.
         },
-        'License'       => MSF_LICENSE,
-        'Author'        =>
-          [
-            'Denis Kolegov <dnkolegov[at]gmail.com>',
-            'Francois Chagnon' # ssllab.rb author (https://github.com/Shopify/ssllabs.rb)
-           ],
-        'DefaultOptions' =>
-          {
-            'RPORT'      => 443,
-            'SSL'        => true,
-          }
-    ))
+        'License' => MSF_LICENSE,
+        'Author' => [
+          'Denis Kolegov <dnkolegov[at]gmail.com>',
+          'Francois Chagnon' # ssllab.rb author (https://github.com/Shopify/ssllabs.rb)
+        ],
+        'DefaultOptions' => {
+          'RPORT' => 443,
+          'SSL' => true,
+        },
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
     register_options(
       [
         OptString.new('HOSTNAME', [true, 'The target hostname']),
@@ -439,7 +494,8 @@ class MetasploitModule < Msf::Auxiliary
         OptBool.new('USECACHE', [true, 'Use cached results (if available), else force live scan', true]),
         OptBool.new('GRADE', [true, 'Output only the hostname: grade', false]),
         OptBool.new('IGNOREMISMATCH', [true, 'Proceed with assessments even when the server certificate doesn\'t match the assessment hostname', true])
-      ], self.class)
+      ]
+    )
   end
 
   def report_good(line)
@@ -504,7 +560,7 @@ class MetasploitModule < Msf::Auxiliary
       end
     end
 
-    # Renegotioation
+    # Renegotiation
     case
     when r.details.reneg_support == 0
       report_warning "Secure renegotiation is not supported"
@@ -686,15 +742,17 @@ class MetasploitModule < Msf::Auxiliary
 
   def output_common_info(r)
     return unless r
+
     print_status "Host: #{r.host}"
 
     r.endpoints.each do |e|
-      print_status "\t  #{e.ip_address}\n"
+      print_status "\t  #{e.ip_address}"
     end
   end
 
   def output_result(r, grade)
     return unless r
+
     output_common_info(r)
     if grade
       output_grades_only(r)
@@ -799,16 +857,15 @@ class MetasploitModule < Msf::Auxiliary
       sleep delay
       r = api.analyse(host: hostname, all: 'done')
     end
-
-    rescue
-      print_error "Invalid parameters"
-    rescue RequestRateTooHigh
-      print_error "Request rate is too high, please slow down"
-    rescue InternalError
-      print_error "Service encountered an error, sleep 5 minutes"
-    rescue ServiceNotAvailable
-      print_error "Service is not available, sleep 15 minutes"
-    rescue ServiceOverloaded
-      print_error "Service is overloaded, sleep 30 minutes"
+  rescue RequestRateTooHigh
+    print_error "Request rate is too high, please slow down"
+  rescue InternalError
+    print_error "Service encountered an error, sleep 5 minutes"
+  rescue ServiceNotAvailable
+    print_error "Service is not available, sleep 15 minutes"
+  rescue ServiceOverloaded
+    print_error "Service is overloaded, sleep 30 minutes"
+  rescue
+    print_error "Invalid parameters"
   end
 end

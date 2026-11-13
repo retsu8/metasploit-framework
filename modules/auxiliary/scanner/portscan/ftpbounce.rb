@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
 
@@ -14,13 +12,13 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'FTP Bounce Port Scanner',
+      'Name' => 'FTP Bounce Port Scanner',
       'Description' => %q{
         Enumerate TCP services via the FTP bounce PORT/LIST
         method.
       },
-      'Author'      => 'kris katterjohn',
-      'License'     => MSF_LICENSE
+      'Author' => 'kris katterjohn',
+      'License' => MSF_LICENSE
     )
 
     register_options([
@@ -31,7 +29,7 @@ class MetasploitModule < Msf::Auxiliary
       OptInt.new('JITTER', [true, "The delay jitter factor (maximum value by which to +/- DELAY) in milliseconds.", 0])
     ])
 
-    deregister_options('RHOST', 'RPORT')
+    deregister_options('RPORT')
   end
 
   # No IPv6 support yet
@@ -75,15 +73,14 @@ class MetasploitModule < Msf::Auxiliary
       end
 
       begin
-
         # Add the delay based on JITTER and DELAY if needs be
-        add_delay_jitter(delay_value,jitter_value)
+        add_delay_jitter(delay_value, jitter_value)
 
         host = (ip.split('.') + [port / 256, port % 256]).join(',')
         resp = send_cmd(["PORT", host])
 
         if resp =~ /^5/
-          #print_error("Got error from PORT to #{ip}:#{port}")
+          # print_error("Got error from PORT to #{ip}:#{port}")
           next
         elsif not resp
           next
@@ -92,7 +89,7 @@ class MetasploitModule < Msf::Auxiliary
         resp = send_cmd(["LIST"])
 
         if resp =~ /^[12]/
-          print_status(" TCP OPEN #{ip}:#{port}")
+          print_good(" TCP OPEN #{ip}:#{port}")
           report_service(:host => ip, :port => port)
         end
       rescue ::Exception

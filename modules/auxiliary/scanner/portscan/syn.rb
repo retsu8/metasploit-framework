@@ -1,24 +1,21 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Capture
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::Scanner
 
   def initialize
     super(
-      'Name'        => 'TCP SYN Port Scanner',
+      'Name' => 'TCP SYN Port Scanner',
       'Description' => %q{
         Enumerate open TCP services using a raw SYN scan.
       },
-      'Author'      => 'kris katterjohn',
-      'License'     => MSF_LICENSE
+      'Author' => 'kris katterjohn',
+      'License' => MSF_LICENSE
     )
 
     register_options([
@@ -28,9 +25,9 @@ class MetasploitModule < Msf::Auxiliary
       OptInt.new('DELAY', [true, "The delay between connections, per thread, in milliseconds", 0]),
       OptInt.new('JITTER', [true, "The delay jitter factor (maximum value by which to +/- DELAY) in milliseconds.", 0]),
       OptString.new('INTERFACE', [false, 'The name of the interface'])
-    ], self.class)
+    ])
 
-    deregister_options('FILTER','PCAPFILE')
+    deregister_options('FILTER', 'PCAPFILE')
   end
 
   # No IPv6 support yet
@@ -73,7 +70,7 @@ class MetasploitModule < Msf::Auxiliary
         self.capture.setfilter(getfilter(shost, sport, dhost, dport))
 
         # Add the delay based on JITTER and DELAY if needs be
-        add_delay_jitter(delay_value,jitter_value)
+        add_delay_jitter(delay_value, jitter_value)
 
         begin
           probe = buildprobe(shost, sport, dhost, dport)
@@ -88,7 +85,7 @@ class MetasploitModule < Msf::Auxiliary
           next if not reply
 
           if (reply.is_tcp? and reply.tcp_flags.syn == 1 and reply.tcp_flags.ack == 1)
-            print_status(" TCP OPEN #{dhost}:#{dport}")
+            print_good(" TCP OPEN #{dhost}:#{dport}")
             report_service(:host => dhost, :port => dport)
           end
         rescue ::Exception
@@ -103,8 +100,8 @@ class MetasploitModule < Msf::Auxiliary
   def getfilter(shost, sport, dhost, dport)
     # Look for associated SYN/ACKs and RSTs
     "tcp and (tcp[13] == 0x12 or (tcp[13] & 0x04) != 0) and " +
-    "src host #{dhost} and src port #{dport} and " +
-    "dst host #{shost} and dst port #{sport}"
+      "src host #{dhost} and src port #{dport} and " +
+      "dst host #{shost} and dst port #{sport}"
   end
 
   def getsource(dhost)
@@ -132,6 +129,7 @@ class MetasploitModule < Msf::Auxiliary
         pcap.each do |r|
           pkt = PacketFu::Packet.parse(r)
           next unless pkt.is_tcp?
+
           reply = pkt
           break
         end
@@ -140,5 +138,4 @@ class MetasploitModule < Msf::Auxiliary
     end
     return reply
   end
-
 end

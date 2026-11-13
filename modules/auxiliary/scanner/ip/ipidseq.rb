@@ -1,20 +1,18 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
 require 'timeout'
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Capture
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
 
   def initialize
     super(
-      'Name'        => 'IPID Sequence Scanner',
+      'Name' => 'IPID Sequence Scanner',
       'Description' => %q{
         This module will probe hosts' IPID sequences and classify
         them using the same method Nmap uses when it's performing
@@ -28,8 +26,8 @@ class MetasploitModule < Msf::Auxiliary
         Nmap's Idle Scan can use hosts whose IPID sequences are
         classified as "Incremental" or "Broken little-endian incremental".
       },
-      'Author'      => 'kris katterjohn',
-      'License'     => MSF_LICENSE
+      'Author' => 'kris katterjohn',
+      'License' => MSF_LICENSE
     )
 
     register_options([
@@ -42,7 +40,7 @@ class MetasploitModule < Msf::Auxiliary
       OptInt.new('SAMPLES', [true, "The IPID sample size", 6])
     ])
 
-    deregister_options('FILTER','PCAPFILE')
+    deregister_options('FILTER', 'PCAPFILE')
   end
 
   def rport
@@ -84,12 +82,12 @@ class MetasploitModule < Msf::Auxiliary
 
     print_status("#{ip}'s IPID sequence class: #{analyze(ipids)}")
 
-    #Add Report
+    # Add Report
     report_note(
       :host	=> ip,
       :proto	=> 'ip',
       :type	=> 'IPID sequence',
-      :data	=> "IPID sequence class: #{analyze(ipids)}"
+      :data	=> { :ipid_sequence_class => analyze(ipids) }
     )
   end
 
@@ -155,7 +153,7 @@ class MetasploitModule < Msf::Auxiliary
 
   def getfilter(shost, dhost, dport)
     "tcp and src host #{dhost} and src port #{dport} and " +
-    "dst host #{shost}"
+      "dst host #{shost}"
   end
 
   # This gets set via the usual capture_sendto interface
@@ -179,6 +177,7 @@ class MetasploitModule < Msf::Auxiliary
           pkt = PacketFu::Packet.parse(r)
           next unless pkt.is_tcp?
           next unless pkt.tcp_flags.syn == 1 || pkt.tcp_flags.rst == 1
+
           reply = pkt
           break
         end
@@ -188,5 +187,4 @@ class MetasploitModule < Msf::Auxiliary
 
     return reply
   end
-
 end

@@ -1,6 +1,10 @@
 RSpec.shared_examples_for 'Msf::DBManager::Session' do
   it { is_expected.to respond_to :get_session }
 
+  if ENV['REMOTE_DB']
+    before {skip("Awaiting sessions port")}
+  end
+
   context '#report_session' do
     let(:options) do
       {}
@@ -33,7 +37,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
           end
 
           let(:host) do
-            FactoryGirl.create(:mdm_host, :workspace => session_workspace)
+            FactoryBot.create(:mdm_host, :workspace => session_workspace)
           end
 
           let(:module_instance) do
@@ -50,7 +54,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
           end
 
           let(:options_workspace) do
-            FactoryGirl.create(:mdm_workspace)
+            FactoryBot.create(:mdm_workspace)
           end
 
           let(:parent_module_fullname) do
@@ -95,7 +99,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
           end
 
           let(:session_workspace) do
-            FactoryGirl.create(:mdm_workspace)
+            FactoryBot.create(:mdm_workspace)
           end
 
           before(:example) do
@@ -115,7 +119,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                 }
             )
 
-            FactoryGirl.create(
+            FactoryBot.create(
                 :mdm_module_detail,
                 :fullname => parent_module_fullname,
                 :name => parent_module_name
@@ -128,11 +132,11 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
             end
 
             let(:match_set) do
-              FactoryGirl.create(:automatic_exploitation_match_set, user: session_workspace.owner,workspace:session_workspace)
+              FactoryBot.create(:automatic_exploitation_match_set, user: session_workspace.owner,workspace:session_workspace)
             end
 
             let(:run) do
-              FactoryGirl.create(:automatic_exploitation_run, workspace: session_workspace, match_set_id: match_set.id)
+              FactoryBot.create(:automatic_exploitation_run, workspace: session_workspace, match_set_id: match_set.id)
             end
 
             let(:user_data) do
@@ -172,24 +176,10 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
             end
 
             context 'with workspace from either :workspace or session' do
-              it 'should pass normalized host from session as :host to #find_or_create_host' do
-                normalized_host = double('Normalized Host')
-                expect(db_manager).to receive(:normalize_host).with(session).and_return(normalized_host)
-                # stub report_vuln so its use of find_or_create_host and normalize_host doesn't interfere.
-                expect(db_manager).to receive(:report_vuln)
-
-                expect(db_manager).to receive(:find_or_create_host).with(
-                  hash_including(
-                    :host => normalized_host
-                  )
-                ).and_return(host)
-
-                report_session
-              end
 
               context 'with session responds to arch' do
                 let(:arch) do
-                  FactoryGirl.generate :mdm_host_arch
+                  FactoryBot.generate :mdm_host_arch
                 end
 
                 before(:example) do
@@ -250,10 +240,19 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                     nil
                   end
 
+                  let(:service_details) { nil }
+                  let(:target_port) { nil }
+
                   before(:example) do
                     Timecop.freeze
 
                     session.exploit_datastore['RPORT'] = rport
+                    if service_details
+                      allow(session.exploit).to receive(:service_details).and_return(service_details)
+                    end
+                    if target_port
+                      allow(session).to receive(:target_port).and_return(target_port)
+                    end
 
                     report_session
                   end
@@ -320,7 +319,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                     end
 
                     let(:service) do
-                      FactoryGirl.create(
+                      FactoryBot.create(
                         :mdm_service,
                         :host => host
                       )
@@ -332,6 +331,43 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                   context 'without RPORT' do
                     it { expect(subject.service).to be_nil }
                   end
+
+                  context 'with session.exploit implementing #service_details' do
+                    let(:service_details) do
+                        {
+                          :service_name => 'HTTP',
+                          :port => 80,
+                          :protocol => 'tcp'
+                        }
+                    end
+
+                    it 'creates a Mdm::Service with the data provided by #service_details' do
+                      expect(subject.service).to be_present
+                      expect(subject.service).to be_a(Mdm::Service)
+                      expect(subject.service.name).to eq(service_details[:service_name])
+                      expect(subject.service.port).to eq(service_details[:port])
+                      expect(subject.service.proto).to eq(service_details[:protocol])
+                    end
+                  end
+
+                  context 'when service_details does not provide port information and session has a target_port' do
+                    let(:service_details) do
+                        {
+                          :service_name => 'HTTP',
+                          :protocol => 'tcp'
+                        }
+                    end
+                    let(:target_port) { rand(2**16 - 1) }
+
+                    it 'create a service wth port from session.target_port' do
+                      expect(subject.service).to be_present
+                      expect(subject.service).to be_a(Mdm::Service)
+                      expect(subject.service.name).to eq(service_details[:service_name])
+                      expect(subject.service.port).to eq(session.target_port)
+                      expect(subject.service.proto).to eq(service_details[:protocol])
+                    end
+                  end
+
                 end
 
                 context 'created Mdm::ExploitAttempt' do
@@ -426,7 +462,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                 it { expect(subject.last_seen).to be_within(1.second).of(Time.now.utc) }
                 it { expect(subject.local_id).to eq(session.sid) }
                 it { expect(subject.opened_at).to be_within(1.second).of(Time.now.utc) }
-                it { expect(subject.platform).to eq(session.platform) }
+                it { expect(subject.platform).to eq(session.session_type) }
                 it { expect(subject.routes).to eq([]) }
                 it { expect(subject.stype).to eq(session.type) }
                 it { expect(subject.via_payload).to eq(session.via_payload) }
@@ -515,24 +551,10 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
             end
 
             context 'with workspace from either :workspace or session' do
-              it 'should pass normalized host from session as :host to #find_or_create_host' do
-                normalized_host = double('Normalized Host')
-                allow(db_manager).to receive(:normalize_host).with(session).and_return(normalized_host)
-                # stub report_vuln so its use of find_or_create_host and normalize_host doesn't interfere.
-                allow(db_manager).to receive(:report_vuln)
-
-                expect(db_manager).to receive(:find_or_create_host).with(
-                    hash_including(
-                        :host => normalized_host
-                    )
-                ).and_return(host)
-
-                report_session
-              end
 
               context 'with session responds to arch' do
                 let(:arch) do
-                  FactoryGirl.generate :mdm_host_arch
+                  FactoryBot.generate :mdm_host_arch
                 end
 
                 before(:example) do
@@ -663,7 +685,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                     end
 
                     let(:service) do
-                      FactoryGirl.create(
+                      FactoryBot.create(
                           :mdm_service,
                           :host => host
                       )
@@ -769,7 +791,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
                 it { expect(subject.last_seen).to be_within(1.second).of(Time.now.utc) }
                 it { expect(subject.local_id).to eq(session.sid) }
                 it { expect(subject.opened_at).to be_within(1.second).of(Time.now.utc) }
-                it { expect(subject.platform).to eq(session.platform) }
+                it { expect(subject.platform).to eq(session.session_type) }
                 it { expect(subject.routes).to eq([]) }
                 it { expect(subject.stype).to eq(session.type) }
                 it { expect(subject.via_payload).to eq(session.via_payload) }
@@ -846,7 +868,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
 
           context 'with Mdm::Host' do
             let(:host) do
-              FactoryGirl.create(:mdm_host)
+              FactoryBot.create(:mdm_host)
             end
 
             context 'created Mdm::Session' do
@@ -951,7 +973,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
 
               context 'with :routes' do
                 let(:routes) do
-                  FactoryGirl.build_list(
+                  FactoryBot.build_list(
                       :mdm_route,
                       1,
                       :session => nil
@@ -998,7 +1020,7 @@ RSpec.shared_examples_for 'Msf::DBManager::Session' do
       it { is_expected.to be_nil }
 
       it 'should not create a connection' do
-        expect(ActiveRecord::Base.connection_pool).not_to receive(:with_connection)
+        expect(ApplicationRecord.connection_pool).not_to receive(:with_connection)
 
         report_session
       end

@@ -16,10 +16,10 @@ module Metasploit
           #   @return [Object] The framework instance object
           attr_accessor :framework
           # @!attribute framework_module
-          #   @return [Object] The framework module caller, if availale
+          #   @return [Object] The framework module caller, if available
           attr_accessor :framework_module
           # @!attribute connection_timeout
-          #   @return [Fixnum] The timeout in seconds for a single SSH connection
+          #   @return [Integer] The timeout in seconds for a single SSH connection
           attr_accessor :connection_timeout
           # @!attribute cred_details
           #   @return [CredentialCollection] Collection of Credential objects
@@ -28,13 +28,13 @@ module Metasploit
           #   @return [String] The IP address or hostname to connect to
           attr_accessor :host
           # @!attribute port
-          #   @return [Fixnum] The port to connect to
+          #   @return [Integer] The port to connect to
           attr_accessor :port
           # @!attribute host
           #   @return [String] The local host for outgoing connections
           attr_accessor :local_host
           # @!attribute port
-          #   @return [Fixnum] The local port for outgoing connections
+          #   @return [Integer] The local port for outgoing connections
           attr_accessor :local_port
           # @!attribute proxies
           #   @return [String] The proxy directive to use for the socket
@@ -43,8 +43,11 @@ module Metasploit
           #   @return [Boolean] Whether the scanner should stop when it has found one working Credential
           attr_accessor :stop_on_success
           # @!attribute bruteforce_speed
-          #   @return [Fixnum] The desired speed, with 5 being 'fast' and 0 being 'slow.'
+          #   @return [Integer] The desired speed, with 5 being 'fast' and 0 being 'slow.'
           attr_accessor :bruteforce_speed
+          # @!attribute sslkeylogfile
+          #   @return [String] The SSL key log file path
+          attr_accessor :sslkeylogfile
 
           validates :connection_timeout,
                     presence: true,
@@ -91,7 +94,7 @@ module Metasploit
           # Attempt a single login against the service with the given
           # {Credential credential}.
           #
-          # @param credential [Credential] The credential object to attmpt to
+          # @param credential [Credential] The credential object to attempt to
           #   login with
           # @return [Result] A Result object indicating success or failure
           # @abstract Protocol-specific scanners must implement this for their
@@ -115,7 +118,7 @@ module Metasploit
           # overridden, the override should probably do something sensible
           # with {#bruteforce_speed}
           #
-          # @return [Fixnum] a number of seconds to sleep between attempts
+          # @return [Integer] a number of seconds to sleep between attempts
           def sleep_time
             case bruteforce_speed
               when 0; 60 * 5
@@ -129,12 +132,16 @@ module Metasploit
 
           # A threadsafe sleep method
           #
-          # @param time [Fixnum] number of seconds (can be a Float), defaults
+          # @param time [Integer] number of seconds (can be a Float), defaults
           # to {#sleep_time}
           #
           # @return [void]
           def sleep_between_attempts(time=self.sleep_time)
             ::IO.select(nil,nil,nil,time) unless sleep_time.zero?
+          end
+
+          def workspace
+            framework_module&.workspace || framework&.db&.workspace&.name
           end
 
           def each_credential
@@ -199,7 +206,9 @@ module Metasploit
             total_error_count = 0
 
             successful_users = Set.new
+            ignored_users = Set.new
             first_attempt = true
+            service_reported = false
 
             each_credential do |credential|
               # Skip users for whom we've have already found a password
@@ -209,6 +218,14 @@ module Metasploit
                 if credential.parent.respond_to?(:skipped)
                   credential.parent.skipped = true
                   credential.parent.save!
+                end
+                next
+              end
+
+              # Users that went into the lock-out list
+              if ignored_users.include?(credential.public)
+                if credential.parent.respond_to?(:skipped)
+                  credential.parent.skipped = true
                 end
                 next
               end
@@ -224,10 +241,44 @@ module Metasploit
 
               yield result if block_given?
 
+              # Any non-UNABLE_TO_CONNECT status means the service is reachable.
+              # A connection-refused proof means the host is up but service not listening.
+              unless service_reported
+                if result.status != Metasploit::Model::Login::Status::UNABLE_TO_CONNECT
+                  framework_module.report_host(
+                    host: host,
+                    workspace_id: framework_module.myworkspace_id
+                  ) if framework_module&.respond_to?(:report_host)
+
+                  framework_module.report_service({
+                      host: host,
+                      port: port,
+                      proto: 'tcp',
+                      workspace_id: framework_module.myworkspace_id
+                    }.tap { |h| h[:name] = result.service_name if result.service_name.present? }
+                  ) if framework_module&.respond_to?(:report_service)
+
+                  service_reported = true
+                elsif connection_refused_proof?(result.proof)
+                  framework_module.report_host(
+                    host: host,
+                    workspace_id: framework_module.myworkspace_id
+                  ) if framework_module&.respond_to?(:report_host)
+
+                  service_reported = true
+                end
+              end
+
               if result.success?
                 consecutive_error_count = 0
                 successful_users << credential.public
                 break if stop_on_success
+              elsif result.status == Metasploit::Model::Login::Status::LOCKED_OUT
+                ignored_users << credential.public
+              elsif result.status ==  Metasploit::Model::Login::Status::INVALID_PUBLIC_PART
+                ignored_users << credential.public
+              elsif result.status == Metasploit::Model::Login::Status::DISABLED
+                ignored_users << credential.public
               else
                 if result.status == Metasploit::Model::Login::Status::UNABLE_TO_CONNECT
                   consecutive_error_count += 1
@@ -236,6 +287,16 @@ module Metasploit
                   break if total_error_count >= 10
                 end
               end
+            rescue => e
+              if framework_module
+                warning = "LOGIN FAILED: #{credential.to_h} - Unhandled error - scan may not produce correct results: #{e.message} - #{e.backtrace}"
+                framework_module.print_warning(warning)
+              end
+              elog("Scan Error: #{e.message}", error: e)
+              consecutive_error_count += 1
+              total_error_count += 1
+              break if consecutive_error_count >= 3
+              break if total_error_count >= 10
             end
             nil
           end
@@ -284,12 +345,25 @@ module Metasploit
             self.connection_timeout = 30 if self.connection_timeout.nil?
           end
 
+          # Returns true when the proof from an UNABLE_TO_CONNECT result
+          # indicates the remote port actively refused the connection.
+          # e.g. The host is up but the service is not listening.
+          def connection_refused_proof?(proof)
+            return false if proof.nil?
+            return true if proof.is_a?(::Rex::ConnectionRefused) || proof.is_a?(::Errno::ECONNREFUSED)
+            proof.to_s =~ /\bconnection\s+refused\b|\bECONNREFUSED\b/i ? true : false
+          end
+
           # This method validates that the credentials supplied
           # are all valid.
           # @return [void]
           def validate_cred_details
             unless cred_details.respond_to? :each
               errors.add(:cred_details, "must respond to :each")
+            end
+
+            if cred_details.empty?
+              errors.add(:cred_details, "can't be blank")
             end
           end
 

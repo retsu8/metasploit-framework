@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
@@ -12,20 +10,20 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'HTTP Git Scanner',
+      'Name' => 'HTTP Git Scanner',
       'Description' => %q(
         This module can detect situations where there may be information
         disclosure vulnerabilities that occur when a Git repository is made
         available over HTTP.
       ),
-      'Author'      => [
+      'Author' => [
         'Nixawk', # module developer
         'Jon Hart <jon_hart[at]rapid7.com>' # improved metasploit module
       ],
-      'References'  => [
-        ['URL', 'https://github.com/git/git/blob/master/Documentation/technical/index-format.txt']
+      'References' => [
+        ['URL', 'http://web.archive.org/web/20220609025426/https://github.com/git/git/blob/master/Documentation/technical/index-format.txt']
       ],
-      'License'     => MSF_LICENSE
+      'License' => MSF_LICENSE
     )
 
     register_options(
@@ -46,6 +44,7 @@ class MetasploitModule < Msf::Auxiliary
 
   def git_index_parse(resp)
     return if resp.blank? || resp.length < 12 # A 12-byte header
+
     signature = resp[0, 4]
     return unless signature == 'DIRC'
 
@@ -53,6 +52,7 @@ class MetasploitModule < Msf::Auxiliary
     entries_count = resp[8, 4].unpack('N')[0].to_i
 
     return unless version && entries_count
+
     [version, entries_count]
   end
 
@@ -66,8 +66,10 @@ class MetasploitModule < Msf::Auxiliary
     vprint_status("#{index_uri} - HTTP/#{res.proto} #{res.code} #{res.message}")
 
     return unless res.code == 200
+
     version, count = git_index_parse(res.body)
     return unless version && count
+
     print_good("#{full_uri} - git repo (version #{version}) found with #{count} files")
 
     report_note(
@@ -89,6 +91,7 @@ class MetasploitModule < Msf::Auxiliary
     vprint_status("#{config_uri} - HTTP/#{res.proto} #{res.code} #{res.message}")
 
     return unless res.code == 200 && res.body =~ /\[(?:branch|core|remote)\]/
+
     print_good("#{config_uri} - git config file found")
 
     report_note(

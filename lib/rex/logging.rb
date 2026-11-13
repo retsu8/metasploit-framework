@@ -1,13 +1,16 @@
 # -*- coding: binary -*-
+module Rex
+module Logging
+
 
 #
 # Log severities
 #
-LOG_ERROR = 'error'
-LOG_DEBUG = 'debug'
-LOG_INFO  = 'info'
-LOG_WARN  = 'warn'
-LOG_RAW   = 'raw'
+LOG_ERROR = :error
+LOG_DEBUG = :debug
+LOG_INFO  = :info
+LOG_WARN  = :warn
+LOG_RAW   = :raw
 
 ##
 #
@@ -62,3 +65,5 @@ LEV_2     = 2
 LEV_3     = 3
 
 require 'rex/logging/log_dispatcher'
+end
+end

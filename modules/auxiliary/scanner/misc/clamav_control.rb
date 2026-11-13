@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::Tcp
@@ -12,28 +10,33 @@ class MetasploitModule < Msf::Auxiliary
     super(
       update_info(
         info,
-        'Name'           => 'ClamAV Remote Command Transmitter',
-        'Description'    => %q(
+        'Name' => 'ClamAV Remote Command Transmitter',
+        'Description' => %q{
           In certain configurations, ClamAV will bind to all addresses and listen for commands.
           This module sends properly-formatted commands to the ClamAV daemon if it is in such a
           configuration.
-        ),
-        'Author'         => [
+        },
+        'Author' => [
           'Alejandro Hdeza', # DISCOVER
           'bwatters-r7',     # MODULE
           'wvu'              # GUIDANCE
         ],
-        'License'        => MSF_LICENSE,
-        'References'     => [
+        'License' => MSF_LICENSE,
+        'References' => [
           [ 'URL', 'https://twitter.com/nitr0usmx/status/740673507684679680/photo/1' ],
           [ 'URL', 'https://github.com/vrtadmin/clamav-faq/raw/master/manual/clamdoc.pdf' ]
         ],
-        'DisclosureDate' => 'Jun 8 2016',
-        'Actions'        => [
-          [ 'VERSION',  'Description' => 'Get Version Information' ],
+        'DisclosureDate' => '2016-06-08',
+        'Actions' => [
+          [ 'VERSION', 'Description' => 'Get Version Information' ],
           [ 'SHUTDOWN', 'Description' => 'Kills ClamAV Daemon' ]
         ],
-        'DefaultAction'  => 'VERSION'
+        'DefaultAction' => 'VERSION',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
       )
     )
     register_options(

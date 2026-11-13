@@ -1,9 +1,7 @@
 ##
-# This module requires Metasploit: http://metasploit.com/download
+# This module requires Metasploit: https://metasploit.com/download
 # Current source: https://github.com/rapid7/metasploit-framework
 ##
-
-require 'msf/core'
 
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::Tcp
@@ -17,21 +15,22 @@ class MetasploitModule < Msf::Auxiliary
 
   def initialize
     super(
-      'Name'        => 'HP Operations Manager Perfd Environment Scanner',
+      'Name' => 'HP Operations Manager Perfd Environment Scanner',
       'Description' => %q{
         This module will enumerate the process list of a remote machine by abusing
         HP Operation Manager's unauthenticated 'perfd' daemon.
         },
-      'Author'      => [ 'Roberto Soares Espreto <robertoespreto[at]gmail.com>' ],
-      'License'     => MSF_LICENSE
+      'Author' => [ 'Roberto Soares Espreto <robertoespreto[at]gmail.com>' ],
+      'License' => MSF_LICENSE
     )
 
     commands_help = ALLOWED_COMMANDS.join(',')
     register_options(
-    [
-      Opt::RPORT(5227),
-      OptString.new("COMMANDS", [true, "Command(s) to execute (one or more of #{commands_help})", commands_help])
-    ], self.class)
+      [
+        Opt::RPORT(5227),
+        OptString.new("COMMANDS", [true, "Command(s) to execute (one or more of #{commands_help})", commands_help])
+      ]
+    )
   end
 
   def commands
@@ -50,7 +49,6 @@ class MetasploitModule < Msf::Auxiliary
 
   def run_host(target_host)
     begin
-
       connect
       banner_resp = sock.get_once
       if banner_resp && banner_resp =~ /^Welcome to the perfd server/
